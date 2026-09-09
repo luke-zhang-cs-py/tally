@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12141a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Tally</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Tally</h1>
+    <p class="sub" id="todayLabel">—</p>
+  </div>
+  <span class="chip" id="link" hidden></span>
+</header>
+
+<!-- The figure you opened the app to see, before anything is tapped. -->
+<section class="totals">
+  <div class="total">
+    <span class="label">Today</span>
+    <strong class="figure" id="today">—</strong>
+  </div>
+  <div class="total">
+    <span class="label">This week</span>
+    <strong class="figure" id="week">—</strong>
+  </div>
+  <div class="total">
+    <span class="label">This month</span>
+    <strong class="figure" id="month">—</strong>
+  </div>
+</section>
+
+<p class="notice" id="notice" hidden></p>
+
+<main>
+
+<!-- ------------------------------------------------------- the shortcuts -->
+<!-- The whole point of the app. Things bought often enough to be a habit
+     become one press, so the common case never reaches the keypad. -->
+<section class="card" id="usualCard" hidden>
+  <h2>Again</h2>
+  <div class="usual" id="usual"></div>
+</section>
+
+<!-- ---------------------------------------------------------- the keypad -->
+<section class="card">
+  <h2>New</h2>
+
+  <div class="amountRow">
+    <span class="currencyPick">
+      <select id="currency" aria-label="Currency"></select>
+    </span>
+    <output class="amount" id="amount">0.00</output>
+  </div>
+
+  <div class="keys" id="keys">
+    <button type="button" data-key="1">1</button>
+    <button type="button" data-key="2">2</button>
+    <button type="button" data-key="3">3</button>
+    <button type="button" data-key="4">4</button>
+    <button type="button" data-key="5">5</button>
+    <button type="button" data-key="6">6</button>
+    <button type="button" data-key="7">7</button>
+    <button type="button" data-key="8">8</button>
+    <button type="button" data-key="9">9</button>
+    <button type="button" data-key="clear" class="soft">C</button>
+    <button type="button" data-key="0">0</button>
+    <button type="button" data-key="back" class="soft">←</button>
+  </div>
+
+  <div class="chips" id="categories"></div>
+
+  <div class="row">
+    <label class="field grow">
+      <span>Note</span>
+      <input id="note" placeholder="optional" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>Date</span>
+      <input id="date" type="date">
+    </label>
+  </div>
+
+  <button type="button" id="save" class="save" disabled>Pick an amount</button>
+</section>
+
+<!-- ---------------------------------------------------------- what is in -->
+<section class="card">
+  <div class="cardHead">
+    <h2>Recent</h2>
+    <a class="chip button" id="download" href="/export.csv">Export CSV</a>
+  </div>
+  <ul class="entries" id="entries"></ul>
+  <p class="hint" id="exportNote"></p>
+</section>
+
+<section class="card">
+  <h2>Last two weeks</h2>
+  <div class="bars" id="days"></div>
+  <h3>By category, this month</h3>
+  <div class="bars" id="byCategory"></div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span id="queueNote"></span>
+  <span id="reconcile"></span>
+</footer>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

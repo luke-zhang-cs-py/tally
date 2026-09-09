@@ -1,0 +1,26 @@
+# Your expenses. This is the important line in this file.
+#
+# data/ holds tally.db -- every entry, with dates, amounts and notes. It does
+# not belong in a repository. If you add a feature that writes anything
+# derived from an entry, add it here in the same commit.
+data/
+*.db
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Test artefacts. .coverage is a binary database of one local run, so it
+# changes on every invocation.
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Editors
+.DS_Store
+.idea/
+.vscode/

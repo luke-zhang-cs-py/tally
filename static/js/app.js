@@ -1,0 +1,379 @@
+/* Tally — the browser half.
+ *
+ * Two things shape this file.
+ *
+ * Everything that reaches the DOM goes through esc(). A note is typed by a
+ * person and comes back out as HTML, which is untrusted input by any
+ * reasonable definition -- the face-recognition app in this family shipped a
+ * stored XSS hole by putting a typed name straight into innerHTML.
+ *
+ * An entry is never lost to a failed request. It is queued in localStorage
+ * before the network is touched and only cleared once the server has
+ * confirmed it, so closing the tab mid-send, or tapping save with the server
+ * down, costs nothing. Each carries an id the server dedupes on, so a queue
+ * flushed twice lands once.
+ */
+
+'use strict';
+
+var QUEUE_KEY = 'tally.queue';
+
+var state = {
+  cents: 0,          // what the keypad currently holds
+  category: null,
+  currency: 'EUR',
+  categories: [],
+  today: null
+};
+
+/* --------------------------------------------------------------- helpers */
+
+function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function el(id) { return document.getElementById(id); }
+
+function say(text, kind) {
+  var box = el('notice');
+  if (!text) { box.hidden = true; return; }
+  box.textContent = text;
+  box.className = 'notice' + (kind ? ' ' + kind : '');
+  box.hidden = false;
+}
+
+function api(url, options) {
+  return fetch(url, options).then(function (reply) {
+    return reply.json().then(function (body) {
+      if (!reply.ok) throw new Error(body.error || ('HTTP ' + reply.status));
+      return body;
+    });
+  });
+}
+
+function postJson(url, body) {
+  return api(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+/* An id per entry, not per request, so a retry of the same entry carries the
+ * same one and the server can settle it. */
+function newId() {
+  if (window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID().replace(/-/g, '');
+  }
+  return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
+
+/* The keypad works in cents so nothing here ever holds a fraction. */
+function shown(cents) {
+  var whole = Math.floor(cents / 100);
+  var rest = cents % 100;
+  return whole + '.' + (rest < 10 ? '0' : '') + rest;
+}
+
+/* ----------------------------------------------------------- the queue */
+
+function queued() {
+  try {
+    var raw = window.localStorage.getItem(QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    /* A corrupt or unavailable store must not stop the app recording
+     * anything -- an empty queue loses less than a page that will not load. */
+    return [];
+  }
+}
+
+function setQueue(items) {
+  try {
+    window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
+  } catch (e) { /* private mode, or full. The entry still goes to the server. */ }
+  drawQueueNote(items);
+}
+
+function enqueue(entry) {
+  var items = queued();
+  items.push(entry);
+  setQueue(items);
+}
+
+function forget(ids) {
+  var gone = {};
+  ids.forEach(function (id) { gone[id] = true; });
+  setQueue(queued().filter(function (item) { return !gone[item.clientId]; }));
+}
+
+function drawQueueNote(items) {
+  var waiting = (items || queued()).length;
+  el('queueNote').textContent = waiting
+    ? waiting + ' waiting to send'
+    : 'everything saved';
+}
+
+/* Send whatever is queued. Safe to call at any time: the server dedupes on
+ * the client id, so a flush that overlaps another one lands once. */
+function flush() {
+  var items = queued();
+  if (!items.length) return Promise.resolve(null);
+  return postJson('/api/entries', { entries: items })
+    .then(function (body) {
+      var settled = body.results.filter(function (r) {
+        return r.result === 'added' || r.result === 'duplicate';
+      }).map(function (r) { return r.clientId; });
+      forget(settled);
+
+      var refused = body.results.filter(function (r) {
+        return r.result === 'rejected';
+      });
+      if (refused.length) {
+        /* Dropped rather than retried forever: the server has said why, and
+         * re-sending will not change its mind. */
+        forget(refused.map(function (r) { return r.clientId; }));
+        say(refused.length + ' entr(y/ies) could not be saved: ' +
+            refused[0].error, 'bad');
+      }
+      return body;
+    })
+    .catch(function () {
+      /* Still offline. The queue stays exactly as it is. */
+      return null;
+    });
+}
+
+/* ------------------------------------------------------------- drawing */
+
+function drawTotals(totals) {
+  [['today', 'today'], ['week', 'week'], ['month', 'month']].forEach(
+    function (pair) {
+      var rows = totals[pair[1]] || [];
+      var box = el(pair[0]);
+      if (!rows.length) { box.textContent = '—'; box.className = 'figure'; return; }
+      box.className = 'figure' + (rows[0].text.length > 9 ? ' small' : '');
+      box.innerHTML = esc(rows[0].text) + rows.slice(1).map(function (r) {
+        return '<span class="also">' + esc(r.text) + '</span>';
+      }).join('');
+    });
+}
+
+function drawUsual(rows) {
+  var card = el('usualCard');
+  if (!rows.length) { card.hidden = true; return; }
+  card.hidden = false;
+  el('usual').innerHTML = rows.map(function (row, index) {
+    var label = row.note ? row.note : row.category;
+    return '<button type="button" data-usual="' + index + '">' +
+      '<span class="what">' + esc(label) + '</span>' +
+      '<span class="much">' + esc(row.amount_text) + '</span>' +
+      '<span class="often">' + esc(row.category) + ' · ' +
+      esc(row.times) + ' times</span></button>';
+  }).join('');
+  el('usual').dataset.rows = JSON.stringify(rows);
+}
+
+function drawCategories(names) {
+  state.categories = names;
+  el('categories').innerHTML = names.map(function (name) {
+    return '<button type="button" data-category="' + esc(name) + '" ' +
+      'aria-pressed="' + (name === state.category) + '">' +
+      esc(name) + '</button>';
+  }).join('');
+}
+
+function drawEntries(rows) {
+  var pending = queued();
+  var box = el('entries');
+  if (!rows.length && !pending.length) {
+    box.innerHTML = '<li class="empty">Nothing yet. Tap an amount and a ' +
+      'category.</li>';
+    return;
+  }
+  var waiting = pending.map(function (item) {
+    return '<li><span><span class="what">' + esc(item.category) +
+      (item.note ? ' · ' + esc(item.note) : '') +
+      '</span><span class="when">waiting to send</span></span>' +
+      '<span class="much pending">' + esc(item.currency) + ' ' +
+      esc(item.amount) + '</span><span></span></li>';
+  }).join('');
+
+  box.innerHTML = waiting + rows.map(function (row) {
+    return '<li><span><span class="what">' + esc(row.category) +
+      (row.note ? ' · ' + esc(row.note) : '') +
+      '</span><span class="when">' + esc(row.spent_on) + '</span></span>' +
+      '<span class="much">' + esc(row.amount_text) + '</span>' +
+      '<button class="iconButton" data-remove="' + esc(row.id) +
+      '" title="Delete">×</button></li>';
+  }).join('');
+}
+
+function drawBars(id, rows, label, value) {
+  var peak = rows.reduce(function (n, r) { return Math.max(n, r.cents); }, 0) || 1;
+  el(id).innerHTML = rows.map(function (row) {
+    var width = (row.cents / peak * 100).toFixed(1);
+    return '<div class="bar' + (row.cents ? '' : ' none') + '">' +
+      '<span class="lab">' + esc(label(row)) + '</span>' +
+      '<span class="rail"><span class="fill" style="width:' + width +
+      '%"></span></span>' +
+      '<span class="val">' + esc(value(row)) + '</span></div>';
+  }).join('');
+}
+
+/* ------------------------------------------------------------ the keypad */
+
+function press(key) {
+  if (key === 'clear') { state.cents = 0; }
+  else if (key === 'back') { state.cents = Math.floor(state.cents / 10); }
+  else {
+    /* Digits shift in from the right, the way a till works: 3, 5, 0 gives
+     * 3.50. No decimal point to place and none to get wrong. */
+    var next = state.cents * 10 + Number(key);
+    if (next > 99999999) return;          /* a million is not a coffee */
+    state.cents = next;
+  }
+  drawAmount();
+}
+
+function drawAmount() {
+  var box = el('amount');
+  box.textContent = shown(state.cents);
+  box.className = 'amount' + (state.cents ? '' : ' zero');
+  var ready = state.cents > 0 && state.category;
+  el('save').disabled = !ready;
+  el('save').textContent = ready
+    ? 'Save ' + state.currency + ' ' + shown(state.cents)
+    : (state.cents ? 'Pick a category' : 'Pick an amount');
+}
+
+function pick(name) {
+  state.category = state.category === name ? null : name;
+  drawCategories(state.categories);
+  drawAmount();
+}
+
+/* -------------------------------------------------------------- saving */
+
+function save(entry) {
+  /* Queued before the network is touched, so a failure loses nothing. */
+  enqueue(entry);
+  refreshLocal();
+  return flush().then(function (body) {
+    if (body) { say('Saved.', 'good'); }
+    else { say('Saved here — it will send when the server is back.', ''); }
+    return load();
+  });
+}
+
+function refreshLocal() {
+  drawQueueNote();
+  api('/api/entries?limit=25').then(function (body) {
+    drawEntries(body.entries);
+  }).catch(function () { drawEntries([]); });
+}
+
+function load() {
+  return api('/api/overview').then(function (body) {
+    state.today = body.today;
+    if (!state.categories.length) { state.currency = body.defaultCurrency; }
+    el('todayLabel').textContent = body.today;
+    el('date').value = el('date').value || body.today;
+    el('date').max = body.today;
+
+    if (!el('currency').options.length) {
+      el('currency').innerHTML = body.currencies.map(function (code) {
+        return '<option value="' + esc(code) + '"' +
+          (code === state.currency ? ' selected' : '') + '>' +
+          esc(code) + '</option>';
+      }).join('');
+    }
+
+    drawTotals(body.totals);
+    drawUsual(body.usual);
+    drawCategories(body.categories);
+    drawEntries(body.recent);
+    drawBars('days', body.days,
+             function (r) { return r.date.slice(5); },
+             function (r) { return r.text; });
+    drawBars('byCategory', body.byCategory,
+             function (r) { return r.category; },
+             function (r) { return r.text; });
+    el('exportNote').textContent = body.export.entries
+      ? body.export.entries + ' entries this month, ' + body.export.text +
+        ' — the file imports straight into the wallet app'
+      : 'Nothing to export this month yet.';
+    drawAmount();
+    return body;
+  }).catch(function (bad) {
+    say('Cannot reach the server — entries are being kept here. ' +
+        bad.message, '');
+    drawEntries([]);
+  });
+}
+
+/* ------------------------------------------------------------- wiring */
+
+el('keys').addEventListener('click', function (event) {
+  var key = event.target.dataset && event.target.dataset.key;
+  if (key) press(key);
+});
+
+el('categories').addEventListener('click', function (event) {
+  var name = event.target.dataset && event.target.dataset.category;
+  if (name) pick(name);
+});
+
+el('currency').addEventListener('change', function () {
+  state.currency = this.value;
+  drawAmount();
+});
+
+el('save').addEventListener('click', function () {
+  if (!state.cents || !state.category) return;
+  save({
+    clientId: newId(),
+    amount: shown(state.cents),
+    category: state.category,
+    note: el('note').value.trim(),
+    currency: state.currency,
+    date: el('date').value || state.today
+  });
+  state.cents = 0;
+  el('note').value = '';
+  drawAmount();
+});
+
+/* One tap: the shortcut carries its own amount, category and note. */
+el('usual').addEventListener('click', function (event) {
+  var button = event.target.closest ? event.target.closest('[data-usual]') : null;
+  if (!button) return;
+  var rows = JSON.parse(this.dataset.rows || '[]');
+  var row = rows[Number(button.dataset.usual)];
+  if (!row) return;
+  save({
+    clientId: newId(),
+    amount: shown(row.amount),
+    category: row.category,
+    note: row.note,
+    currency: row.currency,
+    date: el('date').value || state.today
+  });
+});
+
+el('entries').addEventListener('click', function (event) {
+  var id = event.target.dataset && event.target.dataset.remove;
+  if (!id) return;
+  fetch('/api/entry/' + id, { method: 'DELETE' })
+    .then(function () { say('Deleted.', ''); return load(); })
+    .catch(function (bad) { say(bad.message, 'bad'); });
+});
+
+/* Anything stranded from a previous session goes as soon as we are back. */
+window.addEventListener('online', function () { flush().then(load); });
+
+drawQueueNote();
+flush().then(load);
