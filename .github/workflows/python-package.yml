@@ -1,0 +1,40 @@
+name: Python Package
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest
+
+      - name: Lint with flake8
+        run: |
+          # Real errors only: syntax problems and undefined names.
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Everything else is advisory.
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run tests
+        # Note what this runner does not have: data/ is gitignored, so there
+        # is no database, and the wallet app is not checked out beside this
+        # one -- so the test that holds the two apps' CSV column names
+        # together skips here rather than failing. It runs locally, where both
+        # repositories are present, which is where a rename would happen.
+        run: pytest -q -rs
