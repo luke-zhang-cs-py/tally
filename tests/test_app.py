@@ -184,7 +184,8 @@ def test_a_queued_entry_carries_every_field_the_single_save_does(client):
 
     kept = ("category", "note", "currency", "spent_on", "amount")
     assert len(saved) == 2, "both landed on the given date"
-    assert {key: queued[key] for key in kept} ==         {key: saved[0][key] for key in kept}
+    assert ({key: queued[key] for key in kept}
+            == {key: saved[0][key] for key in kept})
     assert queued["note"] == "Airport"
     assert queued["currency"] == "CAD"
     assert queued["spent_on"] == "2026-09-05"
@@ -248,6 +249,33 @@ def test_the_file_is_reported_to_add_up(client):
     body = client.get("/api/reconciles").get_json()
     assert body["agrees"] is True
     assert body["file"] == body["stored"] == 350
+    assert body["text"] == "€3.50", "the footer prints this"
+
+
+# ------------------------------------------------------------ the markup
+
+def test_every_id_in_the_page_is_used_by_the_script():
+    """Dead markup, caught structurally.
+
+    The page shipped a hidden header chip and a footer span that nothing ever
+    filled -- and the empty footer span was hiding something real:
+    /api/reconciles was implemented and tested but never called from the
+    page, so a documented feature was invisible. An element nobody writes to
+    is either a missing feature or litter, and both are worth finding.
+    """
+    import re
+    here = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(here)
+    with open(os.path.join(root, "templates", "index.html"),
+              encoding="utf-8") as handle:
+        ids = set(re.findall(r'id="([A-Za-z][\w-]*)"', handle.read()))
+    with open(os.path.join(root, "static", "js", "app.js"),
+              encoding="utf-8") as handle:
+        script = handle.read()
+
+    assert ids, "no ids found -- the pattern stopped matching"
+    unused = sorted(i for i in ids if f"'{i}'" not in script)
+    assert not unused, f"nothing in app.js writes to: {unused}"
 
 
 # ----------------------------------------------------------------- safety

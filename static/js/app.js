@@ -224,6 +224,23 @@ function drawBars(id, rows, label, value) {
   }).join('');
 }
 
+/* Whether the file the Export button hands you adds up to what is stored.
+ * Worth showing rather than only having: it is the one property a reader needs
+ * before passing the CSV to another program.
+ *
+ * Not part of /api/overview, because answering it means building the whole
+ * export -- and the overview is the request the keypad waits on. Asked for
+ * separately and never awaited, so a slow answer cannot delay a tap. */
+function drawReconcile() {
+  api('/api/reconciles').then(function (body) {
+    var box = el('reconcile');
+    box.textContent = body.agrees
+      ? 'export adds up — ' + body.text
+      : 'export does not match the database';
+    box.className = body.agrees ? '' : 'bad';
+  }).catch(function () { el('reconcile').textContent = ''; });
+}
+
 /* ------------------------------------------------------------ the keypad */
 
 function press(key) {
@@ -307,6 +324,7 @@ function load() {
         ' — the file imports straight into the wallet app'
       : 'Nothing to export this month yet.';
     drawAmount();
+    drawReconcile();
     return body;
   }).catch(function (bad) {
     say('Cannot reach the server — entries are being kept here. ' +

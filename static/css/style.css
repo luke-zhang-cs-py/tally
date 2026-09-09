@@ -222,3 +222,6 @@ a.chip:hover { border-color: var(--ink-dim); color: var(--ink); }
   flex-wrap: wrap; padding: 12px 16px 22px; border-top: 1px solid var(--line);
   color: var(--ink-faint); font: 400 var(--t-small) var(--mono);
 }
+/* The one place a colour carries a status here, so it is never the only
+ * signal: the sentence beside it says which way round it is. */
+.foot .bad { color: var(--bad); }
