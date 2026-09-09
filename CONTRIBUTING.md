@@ -48,7 +48,7 @@ and one of them had been hiding a real failure mode behind a blank string.
 
 ## Tests
 
-`pytest -q` — 133, and coverage is 100%. Both are expected to stay there.
+`pytest -q` — 134, and coverage is 100%. Both are expected to stay there.
 
 Two things matter more than the number.
 

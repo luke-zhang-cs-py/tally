@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-133%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](.coveragerc)
 
 A phone-first expense tracker. Open it, tap an amount on a keypad, tap a
@@ -114,7 +114,7 @@ Point it somewhere else with `TALLY_DATA=/path/to/folder`.
 ## Tests
 
 ```bash
-pytest -q                                   # 133 passed
+pytest -q                                   # 134 passed
 pytest -q --cov=. --cov-report=term-missing # 100% of 304 statements
 ```
 
@@ -125,7 +125,7 @@ figure belonged, a queue that doubled on retry. Where a test guards a
 structural property, it has been run against a deliberately broken copy of the
 code to confirm it fails; a guard nobody has watched fail is worth nothing.
 
-All 133 run when the wallet app is checked out beside this one. On CI, and on
+All 134 run when the wallet app is checked out beside this one. On CI, and on
 a machine with only this repository, the two cross-repo column checks skip
 instead — `pytest -q -rs` says so rather than passing quietly. They are the
 ones that would catch a renamed CSV column, so they matter most on the machine

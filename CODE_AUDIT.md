@@ -5,7 +5,7 @@ review the other five projects in this family had; this one was written with it
 in hand, so the list is shorter and the findings are mostly things caught
 before they shipped rather than after.
 
-Measured 9 September 2026: **133 tests, 100% of 304 statements**, flake8 clean
+Measured 9 September 2026: **134 tests, 100% of 304 statements**, flake8 clean
 including `--max-complexity=10`.
 
 ## Dispensables
@@ -26,6 +26,20 @@ lives, in `test_no_total_comes_back_null`.
 
 **Unused import.** `money` in `tests/test_export.py`, left behind by an
 earlier version.
+
+**Dead markup — three ids the script never wrote to.** One was litter, a
+hidden chip in the header. One was an id on a plain link that works without
+JavaScript. The third was not dispensable at all: an empty footer span whose
+emptiness was hiding a *missing feature*. `/api/reconciles` was implemented,
+tested, and listed in the README, and the page never called it — so whether
+the exported file adds up to what is stored was a property the app could
+answer and never did. It now prints in the footer, fetched separately from
+`/api/overview` because answering it means building the whole export and the
+overview is the request the keypad waits on.
+
+`test_every_id_in_the_page_is_used_by_the_script` catches the next one. An
+element nobody writes to is either litter or a missing feature, and this
+repository had one of each.
 
 Notably *absent*: this app has no rate handling, no multi-format date parsing
 and no accounting-negative rules, all of which the wallet app needs because it
