@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tally — overview</title>
+<meta name="description" content="A phone-first expense tracker: a keypad instead of a text field, two taps for a habit, nothing lost to a bad connection, and currencies that are never added together.">
+<meta property="og:title" content="Tally — record what you spent">
+<!-- No count in here. A figure typed into a meta tag is one nothing on the
+     page derives, so it is the first thing to go stale. -->
+<meta property="og:description" content="Record a purchase in the seconds after you make it. Local only, integer cents, and a CSV that imports straight into the wallet app.">
+<meta property="og:type" content="website">
+<style>
+/* The warm surface this family of pages uses. The marks on top come from the
+ * validated palette and were re-run against *this* surface, because contrast
+ * only means anything against the colour the chart actually sits on:
+ *
+ *   series  #2a78d6  on #fffdf7   all five checks PASS (light)
+ *   series  #3987e5  on #1a1a19   all five checks PASS (dark)
+ *   good    #0ca30c  3.30:1
+ *   warning #fab219  1.80:1  sub-3:1 BY DESIGN -> always icon + label
+ *   crit    #d03b3b  4.72:1
+ *
+ * Run as a categorical set the status colours fail on #fab219, and are meant
+ * to: status is not a categorical palette, and amber is legal only with a
+ * glyph and a word beside it. Every use of it here has both.
+ *
+ * Dark is a selected set stepped for the dark surface, not an inversion. */
+.viz-root {
+  color-scheme: light;
+  --plane:     #ece6d6;
+  --surface:   #fffdf7;
+  --ink:       #12161d;
+  --ink-2:     #3c4453;
+  --ink-muted: #8d7a52;
+  --grid:      #ece6d6;
+  --ring:      #ded5bf;
+  --code-bg:   #f6f1e4;
+  --series:    #2a78d6;
+  --track:     #ece6d6;
+  --good:      #0ca30c;
+  --warning:   #fab219;
+  --critical:  #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --plane: #0d0d0d; --surface: #1a1a19;
+    --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+    --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
+    --series: #3987e5; --track: #2c2c2a;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --plane: #0d0d0d; --surface: #1a1a19;
+  --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+  --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
+  --series: #3987e5; --track: #2c2c2a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+.viz-root {
+  --text: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 34px 24px 44px;
+  font: 15px/1.55 var(--text);
+  background: var(--plane); color: var(--ink);
+  min-height: 100vh;
+}
+main { max-width: 980px; margin: 0 auto; }
+
+.crumb {
+  margin: 0 0 6px; font: 400 12px var(--mono); color: var(--ink-muted);
+  letter-spacing: .02em;
+}
+h1 { font-size: 23px; margin: 0 0 5px; letter-spacing: -0.2px; }
+.lede { color: var(--ink-2); margin: 0; font-size: 15px; max-width: 68ch; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .btn {
+  font: 400 13px var(--text); cursor: pointer; text-decoration: none;
+  display: inline-block;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--ring); border-radius: 8px; padding: 7px 12px;
+}
+button:hover, .btn:hover { border-color: var(--ink-muted); }
+button[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
+
+/* ------------------------------------------------------------ stat tiles */
+/* A bare stat tile is the one form that ships without a hover layer: there is
+ * no plot to interrogate, just the figure and what it counts. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin: 26px 0 10px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; }
+.tile .k { display: block; color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+.tile .v { display: block; margin-top: 3px; font: 600 27px/1.12 var(--text); font-variant-numeric: tabular-nums; }
+.tile .n { display: block; margin-top: 2px; color: var(--ink-muted); font-size: 12px; }
+
+.note { color: var(--ink-muted); font-size: 13px; max-width: 80ch; margin: 12px 0 0; }
+
+/* ---------------------------------------------------------------- panels */
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 17px 19px; margin-top: 22px; }
+.panel h2 { margin: 0 0 2px; font-size: 15px; }
+.panel h3 { margin: 20px 0 6px; font-size: 13px; color: var(--ink-2); }
+.panel .sub { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; max-width: 76ch; }
+.panel p { font-size: 14px; color: var(--ink-2); max-width: 76ch; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; }
+
+/* Thin marks on a recessive track, 4px rounding on the data end only so the
+ * mark stays anchored flat to the baseline it grows from. */
+.bars { display: grid; gap: 9px; }
+.bar { display: grid; grid-template-columns: 130px 1fr 92px; gap: 12px; align-items: center; }
+.bar .lab { font: 400 12.5px var(--mono); color: var(--ink-2); }
+.bar .rail { position: relative; height: 12px; background: var(--track); border-radius: 3px; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 4px 4px 0; }
+.bar .val { text-align: right; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.bar:hover .rail { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ----------------------------------------------------------------- table */
+table { width: 100%; border-collapse: collapse; }
+caption { text-align: left; color: var(--ink-2); font-size: 13px; padding-bottom: 10px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--grid); font-size: 13px; vertical-align: top; }
+th { color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.mono { font-family: var(--mono); font-size: 12px; }
+tr.total td { border-bottom: none; font-weight: 600; }
+[hidden] { display: none !important; }
+
+code { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); border: 1px solid var(--grid); border-radius: 4px; padding: 1px 5px; }
+pre {
+  background: var(--code-bg); border: 1px solid var(--grid); border-radius: 8px;
+  padding: 13px 15px; overflow-x: auto;
+  font: 12.5px/1.7 var(--mono); color: var(--ink); margin: 12px 0 0;
+}
+
+/* Numbered steps. */
+.flow { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.flow li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 13.5px; color: var(--ink-2); }
+.step {
+  font: 500 11px var(--mono); color: var(--series);
+  border: 1px solid var(--ring); border-radius: 5px;
+  text-align: center; padding: 1px 0; height: 20px;
+}
+
+/* Status. Never colour alone: each carries a glyph and a word, which is what
+ * makes the sub-3:1 amber legal. */
+.flag { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px var(--mono); white-space: nowrap; }
+.flag .g { font-size: 12px; }
+.flag.good { color: var(--good); }
+.flag.warn { color: var(--warning); }
+.flag.crit { color: var(--critical); }
+
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0 0; font-size: 13px; }
+dl.kv dt { color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+dl.kv dd { margin: 0; }
+
+footer { margin-top: 28px; color: var(--ink-muted); font-size: 12.5px; max-width: 86ch; }
+footer a { color: inherit; }
+</style>
+</head>
+
+<body class="viz-root" data-palette="#2a78d6">
+<main>
+
+<div class="head">
+  <div>
+    <p class="crumb">tally &middot; port 5005</p>
+    <h1>Record what you spent, in the seconds after you spend it</h1>
+    <p class="lede">
+      A phone-first expense tracker. Open it, tap an amount on a keypad, tap a
+      category, save — two taps if it is something you buy often. It captures
+      the one thing a bank statement cannot: <strong>what a purchase was,
+      while you still remember</strong>. It converts nothing and reconciles
+      nothing, because the app next door already knows the exchange rates and
+      this one does not.
+    </p>
+  </div>
+  <div class="controls">
+    <button id="themeBtn" type="button">Theme</button>
+    <button id="tableBtn" type="button" aria-pressed="false">Table view</button>
+    <a class="btn" href="https://github.com/luke-zhang-cs-py/tally">Repository</a>
+    <a class="btn" id="localBtn" href="http://127.0.0.1:5005/"
+       title="Only works on a machine that is running the app">Open app (local)</a>
+  </div>
+</div>
+
+<section class="tiles" id="tiles" aria-label="Headline figures"></section>
+<p class="note" id="tilesNote"></p>
+
+<!-- ==================================================== the decisions -->
+<section class="panel">
+  <h2>Six decisions, and what each one is avoiding</h2>
+  <p class="sub">
+    None of these is a preference. Each is a specific way the obvious version
+    of this app gets a number wrong.
+  </p>
+  <table>
+    <thead>
+      <tr><th>The decision</th><th>What it prevents</th></tr>
+    </thead>
+    <tbody id="decisionBody"></tbody>
+  </table>
+</section>
+
+<!-- ======================================================= the keypad -->
+<section class="panel">
+  <h2>A keypad, not a text field</h2>
+  <p class="sub">
+    Digits shift in from the right the way a till works, so there is no
+    decimal point to place and none to get wrong — and no keyboard to wait
+    for.
+  </p>
+  <pre id="keypadSample"></pre>
+  <p>
+    <strong>Two taps for a habit.</strong> Anything bought three or more
+    times in the last 90 days becomes a one-press button carrying its own
+    amount, category and note. A habit is a category <em>and</em> an amount:
+    "Coffee" is no shortcut if it is sometimes 2.50 and sometimes 18.
+  </p>
+</section>
+
+<!-- ======================================================== the queue -->
+<section class="panel">
+  <h2>Nothing is lost to a bad connection</h2>
+  <p class="sub">
+    The order matters. An entry is written to <code>localStorage</code>
+    <em>before</em> the network is touched, and cleared only once the server
+    confirms it.
+  </p>
+  <ul class="flow" id="queueList"></ul>
+  <p id="queueNote"></p>
+</section>
+
+<!-- ===================================================== the hand-off -->
+<section class="panel">
+  <h2>The file it hands to the other app</h2>
+  <p class="sub">
+    <code>/export.csv</code> uses exactly the four column names the wallet
+    importer recognises, so it imports with no column mapping at all.
+  </p>
+  <pre id="csvSample"></pre>
+  <p id="csvNote"></p>
+</section>
+
+<!-- ==================================================== the source -->
+<section class="panel" id="modulePanel">
+  <h2>Every module, by size</h2>
+  <p class="sub" id="moduleSub"></p>
+  <div id="moduleBars" class="bars"></div>
+</section>
+
+<section class="panel" id="testPanel">
+  <h2>Where the tests are</h2>
+  <p class="sub" id="testSub"></p>
+  <div id="testBars" class="bars"></div>
+</section>
+
+<section class="panel" id="tablePanel" hidden>
+  <table>
+    <caption>Every module with its size, statements, coverage and what it is
+      for. The same data as the two charts above.</caption>
+    <thead>
+      <tr><th>Module</th><th class="num">Lines</th><th class="num">Stmts</th>
+          <th class="num">Covered</th><th>What it does</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</section>
+
+<!-- =========================================================== the bugs -->
+<section class="panel">
+  <h2>Bugs, and what found each one</h2>
+  <p class="sub">
+    Every assertion in the suite is something that was got wrong first. These
+    are the ones worth naming.
+  </p>
+  <table>
+    <thead>
+      <tr><th>What was wrong</th><th>What found it</th><th class="num">State</th></tr>
+    </thead>
+    <tbody id="bugBody"></tbody>
+  </table>
+</section>
+
+<!-- ========================================================= the limits -->
+<section class="panel">
+  <h2>What it will not do</h2>
+  <p class="sub">
+    The short list, including the one that matters before you put it on a
+    network.
+  </p>
+  <ul class="flow" id="limitList"></ul>
+</section>
+
+<footer>
+  <p id="footNote"></p>
+  <p>
+    <a href="https://github.com/luke-zhang-cs-py/tally">Repository</a>
+    &middot;
+    <a href="https://luke-zhang-cs-py.github.io/Budgeting-EU-to-CAD-USD-Automatic/">The wallet app, which does the other half &rarr;</a>
+    &middot; MIT &middot; runs on your own machine, on port 5005
+  </p>
+</footer>
+
+</main>
+
+<script>
+'use strict';
+
+/* Every number on this page is read from here, so the tiles, the charts and
+ * the table cannot drift apart.
+ *
+ * Measured on 12 September 2026 in the repository: `pytest -q --cov` for the
+ * statements and what is uncovered, `wc -l` for length, and `pytest
+ * --collect-only -q` for the test counts. Not estimated.
+ * tests/test_published_figures.py checks them against a fresh measurement,
+ * and `python tools/refresh_figures.py` rewrites them. */
+
+var MODULES = [
+  { name: 'app.py',     lines: 217, stmts:  92, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
+  { name: 'entries.py', lines: 264, stmts:  89, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'export.py',  lines: 126, stmts:  49, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
+  { name: 'money.py',   lines: 126, stmts:  41, missed:  0, does: 'integer cents; one parser and one formatter' },
+  { name: 'db.py',      lines:  96, stmts:  26, missed:  0, does: 'the schema, and the additive migration' },
+  { name: 'paths.py',   lines:  30, stmts:   7, missed:  0, does: 'where the data lives — one decision, one place' }
+];
+
+var TESTS = [
+  { file: 'test_money.py',             n: 42, of: 'both decimal conventions, and never a silent zero' },
+  { file: 'test_entries.py',           n: 37, of: 'the queries, the habits, and the month boundary' },
+  { file: 'test_app.py',               n: 29, of: 'the routes, the queue, and the rejected-entry rule' },
+  { file: 'test_export.py',            n: 21, of: 'the file, the reconcile, and the wallet’s column names' },
+  { file: 'test_published_figures.py', n:  8, of: 'the numbers on this page, against a fresh measurement' },
+  { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
+];
+
+var TEST_LINES = 1376;
+var ROUTE_COUNT = 8;
+var HABIT_TIMES = 3;
+var HABIT_DAYS = 90;
+
+var DECISIONS = [
+  ['A keypad, not a text field',
+   'A decimal point placed wrong. Digits shift in from the right like a till, so 3 5 0 is 3.50 and there is nothing to misplace.'],
+  ['Money is an integer number of cents',
+   '<code>0.1 + 0.2</code> is <code>0.30000000000000004</code>. A float total disagrees with the entries printed above it, and a reader who notices that stops trusting every other figure on the screen.'],
+  ['Dates are dates, not timestamps',
+   '<code>datetime</code> is a subclass of <code>date</code> in Python, so a timestamp passes an <code>isinstance</code> check untouched and lands as <code>2026-08-31T14:30:00</code> — which sorts <em>after</em> <code>2026-08-31</code>. An expense on the last day of a month vanished from its own month while every other day looked fine.'],
+  ['Currencies are never added together',
+   'A day with €12 and CA$8 shows both, stacked. Summing them needs a rate this app does not have, and inventing a total would be worse than showing two.'],
+  ['Written to the device before the network',
+   'A tap lost to a sleeping laptop or a closed tab. The entry is in <code>localStorage</code> first and cleared only on confirmation.'],
+  ['A rejected entry does not fail its batch',
+   'Losing real expenses to one bad row. The others were real; refusing all of them to reject one is the wrong trade.']
+];
+
+var QUEUE = [
+  'The tap writes the entry to <code>localStorage</code>, with an id generated on the device.',
+  'Only then does it try the network.',
+  'The server dedupes on that id, so a queue flushed twice — a retry, a second tab — lands once.',
+  'The local copy is cleared when, and only when, the server confirms it.'
+];
+
+/* Authored prose with intentional markup, kept out of esc() deliberately --
+ * see drawBugs, which says so. Nothing here comes from a user. */
+var BUGS = [
+  ['A minus sign silently recorded a positive expense',
+   'The parser accepted the sign and then dropped it, so money out was stored as money in. Every total downstream was wrong in the direction that looks like you spent less.',
+   'Testing the parser against both decimal conventions', 'fixed'],
+  ['A formatter answered <code>""</code> for a null',
+   'Which printed a blank where a figure belonged — worse than a zero, because a blank reads as "nothing here" rather than "nothing spent". The guard it came from was unreachable anyway: the amount column is NOT NULL, every grouped SUM has a row by definition, and the ungrouped ones COALESCE. Removed, and the obligation moved to a test of the queries themselves.',
+   'An audit pass, checking whether the guard could ever fire', 'fixed'],
+  ['An expense on the last day of a month vanished from that month',
+   'A timestamp passed the date check untouched and sorted after the date it belonged to. Coerced now, and pinned by a test.',
+   'Recording something late on the 31st', 'fixed'],
+  ['A queue flushed twice recorded everything twice',
+   'Now each entry carries an id the server dedupes on, so a retry or a second tab lands once.',
+   'Closing the tab mid-send and reopening it', 'fixed'],
+  ['The page had three ids the script never wrote to',
+   'One was litter — a hidden chip in the header. But an empty footer span was hiding something real: <code>/api/reconciles</code> was implemented, tested and documented, and the page never called it. Whether the exported file adds up to what is stored is the one property a reader needs before handing the CSV to another program, so it prints in the footer now.',
+   'A structural test that lists every id in the page and every id the script uses', 'fixed'],
+  ['The mismatch case set a class that styled nothing',
+   '<code>.foot .bad</code> did not exist, so the one state worth noticing looked exactly like the one worth ignoring. The sentence beside it says which way round it is, so the colour is never the only signal.',
+   'The same pass', 'fixed'],
+  ['One mapping written out twice',
+   'The six-field entry mapping appeared in both the single save and the queue loop, which is how a field added to one path and forgotten in the other makes entries recorded offline arrive without their note — looking as though they were typed that way. Extracted, and the function that held both went from complexity 13 to something readable.',
+   'An audit pass. Not wrong yet, which is the point', 'fixed']
+];
+
+var LIMITS = [
+  '<strong>There is no login.</strong> Run it with <code>HOST=0.0.0.0</code> to reach it from your phone and anyone on that network can read and add expenses. The app prints that warning on startup. A home network is fine; a café is not.',
+  '<strong>It converts nothing.</strong> No exchange rates, no reconciliation against a bank export — that is the wallet app’s job, and this one deliberately does not duplicate it.',
+  '<strong>It is one person’s ledger.</strong> No accounts, no sharing, no sync. The data is one SQLite file you can copy.',
+  '<strong>It will not add up two currencies</strong>, and no setting makes it.'
+];
+
+/* ------------------------------------------------------------- helpers */
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+function el(id) { return document.getElementById(id); }
+function covered(m) { return m.stmts - m.missed; }
+function coverage(m) { return Math.round(100 * covered(m) / m.stmts); }
+function sum(list, field) {
+  return list.reduce(function (n, item) { return n + field(item); }, 0);
+}
+
+var STMTS = sum(MODULES, function (m) { return m.stmts; });
+var COVERED = sum(MODULES, covered);
+var LINES = sum(MODULES, function (m) { return m.lines; });
+var TEST_COUNT = sum(TESTS, function (t) { return t.n; });
+
+/* ---------------------------------------------------------------- tiles */
+
+function drawTiles() {
+  var tiles = [
+    ['Tests', TEST_COUNT.toLocaleString(),
+     TESTS.length + ' files, ' + TEST_LINES.toLocaleString() + ' lines'],
+    ['Coverage', Math.round(100 * COVERED / STMTS) + '%',
+     COVERED.toLocaleString() + ' of ' + STMTS.toLocaleString() + ' statements'],
+    ['Modules', MODULES.length, LINES.toLocaleString() + ' lines of source'],
+    ['Endpoints', ROUTE_COUNT, 'one request draws the whole page'],
+    ['Taps to record', 2, 'for something you buy often']
+  ];
+  el('tiles').innerHTML = tiles.map(function (t) {
+    return '<div class="tile"><span class="k">' + esc(t[0]) +
+      '</span><strong class="v">' + esc(t[1]) + '</strong>' +
+      '<span class="n">' + esc(t[2]) + '</span></div>';
+  }).join('');
+
+  el('tilesNote').textContent =
+    'Coverage is ' + Math.round(100 * COVERED / STMTS) + '%, and the ' +
+    'number is not the point: the last four uncovered lines were two pieces ' +
+    'of dead code and two real gaps, and chasing the percentage would have ' +
+    'meant testing code that should have been deleted instead. Where a test ' +
+    'guards a structural property it has been run against a deliberately ' +
+    'broken copy to confirm it goes red — four such tests written for these ' +
+    'projects had passed unconditionally, so a guard nobody has watched ' +
+    'fail is treated here as not yet written.';
+}
+
+/* --------------------------------------------------------------- charts */
+
+function drawBars(id, rows, label, value, size, peak) {
+  el(id).innerHTML = rows.map(function (row) {
+    var width = (size(row) / peak * 100).toFixed(1);
+    return '<div class="bar" title="' + esc(label(row) + ' — ' + value(row)) +
+      '"><span class="lab">' + esc(label(row)) + '</span>' +
+      '<span class="rail"><span class="fill" style="width:' + width +
+      '%"></span></span>' +
+      '<span class="val">' + esc(value(row)) + '</span></div>';
+  }).join('');
+}
+
+function byStatements() {
+  return MODULES.slice().sort(function (a, b) { return b.stmts - a.stmts; });
+}
+
+function drawModules() {
+  var rows = byStatements();
+  var peak = rows[0].stmts;
+  el('moduleSub').textContent =
+    'By executable statements, largest first. One measure, so one colour and ' +
+    'no legend — the heading names it, and every bar is labelled directly. ' +
+    'Six modules and ' + STMTS + ' statements in total: this app is small on ' +
+    'purpose, because the thing it has to be is fast to open and fast to ' +
+    'tap, and everything it does not do is something the wallet app does.';
+  drawBars('moduleBars', rows,
+           function (m) { return m.name; },
+           function (m) { return m.stmts + ' · ' + coverage(m) + '%'; },
+           function (m) { return m.stmts; }, peak);
+}
+
+function drawTests() {
+  var peak = Math.max.apply(null, TESTS.map(function (t) { return t.n; }));
+  var most = TESTS.reduce(function (a, b) { return b.n > a.n ? b : a; });
+  el('testSub').textContent =
+    'The heaviest file is ' + most.file + ' at ' + most.n + ' — ' + most.of +
+    ', which is a lot of tests for one small module and exactly right: money ' +
+    'is where a wrong answer looks like a right one. ' +
+    TEST_LINES.toLocaleString() + ' lines of test against ' +
+    LINES.toLocaleString() + ' of source.';
+  drawBars('testBars', TESTS,
+           function (t) { return t.file.replace('test_', '').replace('.py', ''); },
+           function (t) { return String(t.n); },
+           function (t) { return t.n; }, peak);
+}
+
+/* --------------------------------------------------------------- tables */
+
+function drawTable() {
+  var rows = byStatements().map(function (m) {
+    return '<tr><td class="mono">' + esc(m.name) + '</td>' +
+      '<td class="num">' + m.lines + '</td>' +
+      '<td class="num">' + m.stmts + '</td>' +
+      '<td class="num">' + coverage(m) + '%</td>' +
+      '<td>' + esc(m.does) + '</td></tr>';
+  }).join('');
+  el('tableBody').innerHTML = rows +
+    '<tr class="total"><td>Total</td><td class="num">' +
+    LINES.toLocaleString() + '</td><td class="num">' +
+    STMTS.toLocaleString() + '</td><td class="num">' +
+    Math.round(100 * COVERED / STMTS) + '%</td><td>&mdash;</td></tr>';
+}
+
+function drawDecisions() {
+  el('decisionBody').innerHTML = DECISIONS.map(function (d) {
+    return '<tr><td><b>' + d[0] + '</b></td><td>' + d[1] + '</td></tr>';
+  }).join('');
+}
+
+function drawBugs() {
+  el('bugBody').innerHTML = BUGS.map(function (b) {
+    return '<tr><td><b>' + b[0] + '</b><br>' + b[1] + '</td>' +
+      '<td>' + b[2] + '</td>' +
+      '<td class="num"><span class="flag good"><span class="g">✓</span>' +
+      esc(b[3]) + '</span></td></tr>';
+  }).join('');
+}
+
+function drawQueue() {
+  el('queueList').innerHTML = QUEUE.map(function (text, index) {
+    var n = index + 1;
+    return '<li><span class="step">' + (n < 10 ? '0' + n : n) +
+      '</span><span>' + text + '</span></li>';
+  }).join('');
+  el('queueNote').innerHTML =
+    'Close the tab mid-send, or tap save with the laptop asleep, and it goes ' +
+    'when you are back. The one rule that makes the rest of it safe: a ' +
+    'rejected entry in a flushed queue does <b>not</b> fail the batch. The ' +
+    'others were real expenses, and refusing all of them to reject one loses ' +
+    'them.';
+}
+
+function drawLimits() {
+  el('limitList').innerHTML = LIMITS.map(function (text) {
+    return '<li><span class="step">&rarr;</span><span>' + text +
+      '</span></li>';
+  }).join('');
+}
+
+function drawSamples() {
+  el('keypadSample').textContent = [
+    "tap  3      ->   0.03",
+    "tap  5      ->   0.35",
+    "tap  0      ->   3.50",
+    "",
+    "then a category chip, then save. Or one press on a habit button, which",
+    "carries its own amount, category and note -- anything bought " +
+      HABIT_TIMES + "+ times",
+    "in the last " + HABIT_DAYS + " days."
+  ].join('\n');
+
+  el('csvSample').textContent = [
+    "Date,Description,Amount,Currency",
+    "2026-09-08,Coffee - Cafe Nero,-3.50,EUR"
+  ].join('\n');
+
+  el('csvNote').innerHTML =
+    'Expenses are written negative, because the far end reads a negative as ' +
+    'money out. That is a contract between two repositories that know nothing ' +
+    'about each other, so <code>tests/test_export.py</code> reads the wallet ' +
+    'app’s own header list with <code>ast</code> and fails if either side ' +
+    'renames a column. Those two checks skip when the wallet is not checked ' +
+    'out beside this one — on CI, for instance — and say so rather than ' +
+    'passing quietly.';
+}
+
+/* -------------------------------------------------------------- controls */
+
+el('themeBtn').addEventListener('click', function () {
+  var set = document.documentElement.getAttribute('data-theme');
+  var dark = set ? set === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+});
+
+el('tableBtn').addEventListener('click', function () {
+  var showTable = el('tablePanel').hidden;
+  el('tablePanel').hidden = !showTable;
+  el('modulePanel').hidden = showTable;
+  el('testPanel').hidden = showTable;
+  this.setAttribute('aria-pressed', String(showTable));
+  this.textContent = showTable ? 'Chart view' : 'Table view';
+});
+
+el('footNote').textContent =
+  'Figures measured on 12 September 2026 in the repository with pytest ' +
+  '--cov, wc -l and pytest --collect-only, and checked against a fresh ' +
+  'measurement by tests/test_published_figures.py, because a page like this ' +
+  'goes stale the moment a test is added. Everything here is read from one ' +
+  'data block, so the tiles, the charts and the table cannot disagree. The ' +
+  'app is not hosted anywhere: it runs on 127.0.0.1:5005 on your own ' +
+  'machine, its data is one SQLite file that never leaves it, and this page ' +
+  'is just the write-up.';
+
+drawTiles();
+drawModules();
+drawTests();
+drawTable();
+drawDecisions();
+drawBugs();
+drawQueue();
+drawLimits();
+drawSamples();
+</script>
+</body>
+</html>

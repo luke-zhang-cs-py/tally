@@ -1,6 +1,8 @@
 [run]
 omit =
     tests/*
+    # Developer scripts, not shipped code.
+    tools/*
 
 [report]
 exclude_lines =
