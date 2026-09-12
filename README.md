@@ -122,7 +122,7 @@ pytest -q
 pytest -q --cov=. --cov-report=term-missing
 ```
 
-142 tests, 100% of 304 statements -- and those two figures are checked:
+143 tests, 100% of 304 statements -- and those two figures are checked:
 `tests/test_published_figures.py` measures the repository and compares it
 with what the README and the published overview claim, because a figure
 typed into a file goes stale the moment a test is added.

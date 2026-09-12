@@ -164,21 +164,52 @@ def test_the_omitted_modules_really_are_omitted(page):
             f".coveragerc matches it: {omit_patterns()}")
 
 
-def test_every_figure_on_the_page_is_the_measured_one(page):
+def measured_with(page):
+    """The interpreter the page says produced its figures, as "3.12"."""
+    found = re.search(r"var MEASURED_WITH = 'Python (\d+\.\d+)'", page)
+    return found.group(1) if found else None
+
+
+def running():
+    return "%d.%d" % sys.version_info[:2]
+
+
+def test_every_line_count_on_the_page_is_the_measured_one(page):
+    """Line counts, which do not depend on the interpreter."""
     wrong = []
-    for name, (lines, stmts, missed) in sorted(listed_modules(page).items()):
-        real_lines, real_stmts, missing = measure(name)
-        if lines != real_lines:
-            wrong.append(f"{name}: page says {lines} lines, measured "
-                         f"{real_lines}")
-        if stmts != real_stmts:
-            wrong.append(f"{name}: page says {stmts} statements, measured "
-                         f"{real_stmts}")
-    for name, lines in sorted(listed_omissions(page).items()):
+    listed = dict(listed_modules(page))
+    everything = [(name, body[0]) for name, body in listed.items()]
+    everything += sorted(listed_omissions(page).items())
+    for name, lines in sorted(everything):
         real_lines, _, _ = measure(name)
         if lines != real_lines:
             wrong.append(f"{name}: page says {lines} lines, measured "
                          f"{real_lines}")
+    assert not wrong, "the published figures are stale:\n  " + "\n  ".join(wrong)
+
+
+def test_every_statement_count_on_the_page_is_the_measured_one(page):
+    """Statement counts, which do.
+
+    coverage counts 190 statements in one of this family's modules under
+    Python 3.14 and 191 under 3.12; another differs by four. A count is a
+    property of a file *and* an interpreter, so this compares only when the
+    running one is what the page names -- otherwise it would fail on CI for a
+    page that is perfectly accurate.
+    """
+    stated = measured_with(page)
+    assert stated, ("the page does not say which Python measured it, so its "
+                    "statement counts cannot be checked against anything")
+    if stated != running():
+        pytest.skip(f"page measured with Python {stated}, running "
+                    f"{running()} -- statement counts differ by version")
+
+    wrong = []
+    for name, (_, stmts, _) in sorted(listed_modules(page).items()):
+        _, real_stmts, _ = measure(name)
+        if stmts != real_stmts:
+            wrong.append(f"{name}: page says {stmts} statements, measured "
+                         f"{real_stmts}")
     assert not wrong, "the published figures are stale:\n  " + "\n  ".join(wrong)
 
 
@@ -187,6 +218,10 @@ def test_every_figure_on_the_page_is_the_measured_one(page):
 def test_the_uncovered_counts_are_the_measured_ones(page):
     """Only when a run's data is on disk. Without it every statement looks
     uncovered, and a check against that would pass by being wrong twice."""
+    stated = measured_with(page)
+    if stated and stated != running():
+        pytest.skip(f"page measured with Python {stated}, running "
+                    f"{running()}")
     wrong = []
     for name, (_, _, missed) in sorted(listed_modules(page).items()):
         _, _, missing = measure(name)
