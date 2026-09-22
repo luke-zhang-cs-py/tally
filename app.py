@@ -77,9 +77,13 @@ def _reading(app, ctx):
         """
         day = request.args.get("on") or None
         with ctx.connect() as conn:
+            try:
+                totals = entries.totals(conn, day)
+            except entries.EntryError as bad:
+                return jsonify({"error": str(bad)}), 400
             return jsonify({
                 "today": entries.today().isoformat(),
-                "totals": entries.totals(conn, day),
+                "totals": totals,
                 "usual": entries.usual(conn),
                 "categories": entries.categories(conn),
                 "recent": entries.recent(conn, limit=25),
@@ -92,10 +96,18 @@ def _reading(app, ctx):
 
     @app.route("/api/entries")
     def listing():
+        raw_limit = request.args.get("limit", 50)
+        try:
+            limit = int(raw_limit)
+        except (TypeError, ValueError):
+            return jsonify({"error": f"invalid limit: {raw_limit!r}"}), 400
         with ctx.connect() as conn:
-            return jsonify({"entries": entries.recent(
-                conn, limit=request.args.get("limit", 50),
-                day=request.args.get("on") or None)})
+            try:
+                rows = entries.recent(
+                    conn, limit=limit, day=request.args.get("on") or None)
+            except entries.EntryError as bad:
+                return jsonify({"error": str(bad)}), 400
+            return jsonify({"entries": rows})
 
 
 def _record(conn, sent):

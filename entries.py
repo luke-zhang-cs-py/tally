@@ -21,6 +21,7 @@ spent in, and a total is reported per currency rather than summed across them
 and this app has no rate to make it with.
 """
 import datetime as dt
+import sqlite3
 import uuid
 
 import db
@@ -102,12 +103,26 @@ def add(connection, amount, category, note="", currency=None, spent_on=None,
     if existing:
         return existing["id"], "duplicate"
 
-    cursor = connection.execute(
-        "INSERT INTO entries (spent_on, amount, currency, category, note, "
-        "created_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (on.isoformat(), cents, money.known(currency), category,
-         (note or "").strip(),
-         dt.datetime.now().isoformat(timespec="seconds"), mark))
+    try:
+        cursor = connection.execute(
+            "INSERT INTO entries (spent_on, amount, currency, category, note, "
+            "created_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (on.isoformat(), cents, money.known(currency), category,
+             (note or "").strip(),
+             dt.datetime.now().isoformat(timespec="seconds"), mark))
+    except sqlite3.IntegrityError:
+        # The SELECT above is only an optimistic check -- two requests for
+        # the same client id can both pass it and race to this INSERT. The
+        # `client_id UNIQUE` constraint is what actually settles it: one
+        # write wins, the other lands here. That is the same "already
+        # recorded" outcome as finding it above, not a failure, so it is
+        # reported the same way rather than surfacing as a raw 500.
+        connection.rollback()
+        existing = connection.execute(
+            "SELECT id FROM entries WHERE client_id = ?", (mark,)).fetchone()
+        if existing:
+            return existing["id"], "duplicate"
+        raise
     connection.commit()
     return cursor.lastrowid, "added"
 

@@ -117,12 +117,34 @@ function drawQueueNote(items) {
     : 'everything saved';
 }
 
+/* Mirrors app.py's MAX_QUEUED: a batch bigger than the server accepts would
+ * hit the same "too many at once" error every time. Capping this side of it
+ * means a long queue drains in chunks instead of being permanently wedged
+ * behind its own size. */
+var MAX_QUEUED = 200;
+
+/* Entries the server has definitively refused as a batch (not the per-entry
+ * "rejected" outcome, which is already handled and dropped below). Held
+ * rather than discarded so nothing a person typed just vanishes, but kept
+ * out of the active queue so it cannot block entries queued after it. */
+var QUARANTINE_KEY = 'tally.queue.quarantine';
+
+function quarantine(items) {
+  try {
+    var held = window.localStorage.getItem(QUARANTINE_KEY);
+    var existing = held ? JSON.parse(held) : [];
+    window.localStorage.setItem(
+      QUARANTINE_KEY, JSON.stringify(existing.concat(items)));
+  } catch (e) { /* best effort -- the person is still told, below */ }
+}
+
 /* Send whatever is queued. Safe to call at any time: the server dedupes on
  * the client id, so a flush that overlaps another one lands once. */
 function flush() {
   var items = queued();
   if (!items.length) return Promise.resolve(null);
-  return postJson('/api/entries', { entries: items })
+  var batch = items.slice(0, MAX_QUEUED);
+  return postJson('/api/entries', { entries: batch })
     .then(function (body) {
       var settled = body.results.filter(function (r) {
         return r.result === 'added' || r.result === 'duplicate';
@@ -141,8 +163,24 @@ function flush() {
       }
       return body;
     })
-    .catch(function () {
-      /* Still offline. The queue stays exactly as it is. */
+    .catch(function (err) {
+      if (err instanceof TypeError) {
+        /* fetch() itself never got a response back -- no network, DNS
+         * failure, the server is unreachable. Genuinely offline: the queue
+         * stays exactly as it is, there is nothing new to report and every
+         * reason to try again once the connection is back. */
+        return null;
+      }
+      /* The server was reached and answered, but outside the per-entry
+       * results above -- the batch itself was refused (e.g. a size limit)
+       * or the server errored. That is not "offline", and resending this
+       * same batch will fail the same way forever. Quarantine just this
+       * batch rather than leaving it in the queue, so entries queued behind
+       * it are not held hostage by ones that cannot go in. */
+      quarantine(batch);
+      forget(batch.map(function (item) { return item && item.clientId; }));
+      say('could not save ' + batch.length + ' queued entr(y/ies): ' +
+          err.message, 'bad');
       return null;
     });
 }
