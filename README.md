@@ -6,6 +6,8 @@
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](.coveragerc)
 
 **[Read the overview →](https://luke-zhang-cs-py.github.io/tally/)**
+(or open [`docs/index.html`](docs/index.html) directly if the live page
+won't load — it's the same file GitHub Pages serves)
 — the six decisions and what each one is avoiding, and every bug this
 thing has had.
 
