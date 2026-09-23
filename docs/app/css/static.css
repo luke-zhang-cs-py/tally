@@ -1,0 +1,51 @@
+/* ---------------------------------------------------------------------------
+   static.css — the only thing the browser-only build adds to the look
+   ---------------------------------------------------------------------------
+   Loaded after style.css, and it adds rather than overrides: the two builds
+   should look like the same program, because they are the same program.
+
+   The banner is not decoration. This page and the Flask app are pixel for
+   pixel the same, and the difference between them — one keeps your expenses
+   in a SQLite file on your machine, the other keeps them in one browser's
+   localStorage and nowhere else — is invisible unless it is written down.
+   Somebody who records a fortnight of spending here and then clears their
+   site data has lost it, and the only honest place to say so is before they
+   start.
+   --------------------------------------------------------------------------- */
+
+.staticBanner {
+  margin: 0; padding: 11px 16px 13px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  background: #1c1a15;
+  color: var(--ink-dim);
+  font-size: var(--t-small);
+  line-height: 1.65;
+}
+
+.staticBanner b { color: var(--ink); font-weight: 600; }
+.staticBanner code {
+  font: 400 11px var(--mono); color: var(--ink);
+  background: var(--panel-2); border-radius: 4px; padding: 1px 4px;
+}
+.staticBanner a { color: var(--accent); text-decoration: none; }
+.staticBanner a:hover { text-decoration: underline; }
+
+/* Its own line, and only ever written to by static-ui.js when the store this
+   build depends on is not actually there -- a private window, or a browser
+   with storage switched off. In that case nothing survives the tab closing,
+   which is a much stronger claim than the banner above it makes. */
+.staticBanner .warn {
+  display: block; margin-top: 6px; color: var(--bad); font-weight: 500;
+}
+
+/* The counterpart of "it lives in this browser": a way to take it back out
+   again. Sized like the chips in style.css so it does not read as a control
+   the Flask app also has. */
+.staticBanner .forget {
+  margin-top: 8px; font: 400 var(--t-small) var(--text);
+  background: var(--panel-2); color: var(--ink-dim);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 11px; cursor: pointer;
+}
+.staticBanner .forget:hover { color: var(--ink); border-color: var(--ink-faint); }

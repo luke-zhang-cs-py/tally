@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12141a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Tally — browser build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/static.css">
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Tally</h1>
+    <p class="sub" id="todayLabel">—</p>
+  </div>
+</header>
+
+<!-- Added by tools/build_static.py. The Flask app does not have this
+     paragraph because the Flask app does not need it: it writes to a SQLite
+     file you can see, back up and copy. This build cannot, and the two pages
+     are otherwise identical, so the difference has to be said out loud
+     before somebody records a fortnight of spending into a browser tab. -->
+<div class="staticBanner">
+  <b>This is the browser-only build.</b> There is no server and no database.
+  Your entries are held in <b>this browser's storage, on this device, and
+  nowhere else</b> — nothing is uploaded, nothing syncs between your phone and
+  your laptop, and clearing site data for this page deletes them. <b>Export the
+  CSV</b> if you want a copy that outlives the tab; it is the same file the
+  Flask app produces, and it still imports straight into the wallet app.
+  The arithmetic is not re-done by eye: <code>money.js</code> is a port of
+  <code>money.py</code>'s integer cents, and <code>tools/build_static.py</code>
+  runs both against each other and refuses to publish this page if they
+  disagree about a single amount, a single total or a single error message.
+  <a href="https://github.com/luke-zhang-cs-py/tally">Source, and the Flask app that keeps it in SQLite &rarr;</a>
+  <span class="warn" id="staticWarn"></span>
+  <button type="button" class="forget" id="forget">Forget everything in this browser</button>
+</div>
+
+<!-- The figure you opened the app to see, before anything is tapped. -->
+<section class="totals">
+  <div class="total">
+    <span class="label">Today</span>
+    <strong class="figure" id="today">—</strong>
+  </div>
+  <div class="total">
+    <span class="label">This week</span>
+    <strong class="figure" id="week">—</strong>
+  </div>
+  <div class="total">
+    <span class="label">This month</span>
+    <strong class="figure" id="month">—</strong>
+  </div>
+</section>
+
+<p class="notice" id="notice" hidden></p>
+
+<main>
+
+<!-- ------------------------------------------------------- the shortcuts -->
+<!-- The whole point of the app. Things bought often enough to be a habit
+     become one press, so the common case never reaches the keypad. -->
+<section class="card" id="usualCard" hidden>
+  <h2>Again</h2>
+  <div class="usual" id="usual"></div>
+</section>
+
+<!-- ---------------------------------------------------------- the keypad -->
+<section class="card">
+  <h2>New</h2>
+
+  <div class="amountRow">
+    <span class="currencyPick">
+      <select id="currency" aria-label="Currency"></select>
+    </span>
+    <output class="amount" id="amount">0.00</output>
+  </div>
+
+  <div class="keys" id="keys">
+    <button type="button" data-key="1">1</button>
+    <button type="button" data-key="2">2</button>
+    <button type="button" data-key="3">3</button>
+    <button type="button" data-key="4">4</button>
+    <button type="button" data-key="5">5</button>
+    <button type="button" data-key="6">6</button>
+    <button type="button" data-key="7">7</button>
+    <button type="button" data-key="8">8</button>
+    <button type="button" data-key="9">9</button>
+    <button type="button" data-key="clear" class="soft">C</button>
+    <button type="button" data-key="0">0</button>
+    <button type="button" data-key="back" class="soft">←</button>
+  </div>
+
+  <div class="chips" id="categories"></div>
+
+  <div class="row">
+    <label class="field grow">
+      <span>Note</span>
+      <input id="note" placeholder="optional" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>Date</span>
+      <input id="date" type="date">
+    </label>
+  </div>
+
+  <button type="button" id="save" class="save" disabled>Pick an amount</button>
+</section>
+
+<!-- ---------------------------------------------------------- what is in -->
+<section class="card">
+  <div class="cardHead">
+    <h2>Recent</h2>
+    <!-- A button, not a link: there is no server to answer /export.csv,
+         so static-ui.js builds the same file here and hands it over
+         as a blob. href="#" rather than the path, so a page whose
+         script failed shows a dead control instead of a 404. -->
+    <a class="chip button" id="exportCsv" href="#">Export CSV</a>
+  </div>
+  <ul class="entries" id="entries"></ul>
+  <p class="hint" id="exportNote"></p>
+</section>
+
+<section class="card">
+  <h2>Last two weeks</h2>
+  <div class="bars" id="days"></div>
+  <h3>By category, this month</h3>
+  <div class="bars" id="byCategory"></div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span id="queueNote"></span>
+  <span id="reconcile"></span>
+</footer>
+
+<!-- Order matters. money.js is read by store.js as it defines
+     itself; static-api.js installs the fetch shim before app.js
+     runs and immediately calls it; static-ui.js binds the controls
+     this build adds and goes last. app.js itself is the Flask app's
+     file, copied byte for byte -- see tools/build_static.py. -->
+<script src="js/money.js"></script>
+<script src="js/store.js"></script>
+<script src="js/static-api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/static-ui.js"></script>
+</body>
+</html>

@@ -180,6 +180,8 @@ footer a { color: inherit; }
     <button id="themeBtn" type="button">Theme</button>
     <button id="tableBtn" type="button" aria-pressed="false">Table view</button>
     <a class="btn" href="https://github.com/luke-zhang-cs-py/tally">Repository</a>
+    <a class="btn" href="app/"
+       title="The same page, with the browser standing in for the server. Entries are kept in that browser and nowhere else.">Try it here &rarr;</a>
     <a class="btn" id="localBtn" href="http://127.0.0.1:5005/"
        title="Only works on a machine that is running the app">Open app (local)</a>
   </div>
@@ -281,6 +283,46 @@ footer a { color: inherit; }
     </thead>
     <tbody id="bugBody"></tbody>
   </table>
+</section>
+
+<!-- ================================================== the browser build -->
+<section class="panel">
+  <h2>The version you can try without installing anything</h2>
+  <p class="sub">
+    <a href="app/">docs/app/</a> is the same app with the browser standing in
+    for the server. Same template, same stylesheet, same
+    <code>static/js/app.js</code> — copied byte for byte by
+    <code>tools/build_static.py</code>, never forked.
+  </p>
+  <p>
+    Tally's server is persistence and nothing else, so that is the only part
+    the build replaces: <code>db.py</code>, <code>entries.py</code> and
+    <code>export.py</code> are ported to localStorage, and a fetch shim
+    answers the routes <code>app.js</code> already calls. Which means the
+    published copy is running a second implementation of the money
+    arithmetic, on the page most people will actually open — and a port that
+    quietly reintroduced a float would be invisible there, because nothing in
+    <code>tests/</code> ever loads it.
+  </p>
+  <p>
+    So the build does not trust it. Before it writes a byte it starts a real
+    browser, loads the JavaScript it is about to publish, and runs it against
+    the Python: every value through <code>parse</code>, <code>format</code>,
+    <code>plain</code>, <code>total</code> and <code>known</code> including
+    the wording of every error; one fixture of entries loaded into a real
+    SQLite database and into localStorage with every payload compared field by
+    field; and the whole list of HTTP requests, the failing ones included,
+    replayed against Flask's test client and against the shim. Any
+    disagreement and nothing is written. It has already caught two: a
+    <code>localStorage</code> read outside its own try/catch that left the
+    store undefined in a private window, and a limit parsed with
+    <code>Number()</code> where <code>app.py</code> uses <code>int()</code>.
+  </p>
+  <p>
+    What it is not: there is no sync and no account. Entries live in one
+    browser on one device, and clearing site data deletes them. The CSV export
+    still works and is the same file, which is the way out.
+  </p>
 </section>
 
 <!-- ========================================================= the limits -->
@@ -602,9 +644,10 @@ el('footNote').textContent =
   'measurement by tests/test_published_figures.py, because a page like this ' +
   'goes stale the moment a test is added. Everything here is read from one ' +
   'data block, so the tiles, the charts and the table cannot disagree. The ' +
-  'app is not hosted anywhere: it runs on 127.0.0.1:5005 on your own ' +
-  'machine, its data is one SQLite file that never leaves it, and this page ' +
-  'is just the write-up.';
+  'Python app is not hosted anywhere: it runs on 127.0.0.1:5005 on your own ' +
+  'machine and its data is one SQLite file that never leaves it. The ' +
+  'browser build linked above is hosted, and holds its entries in your own ' +
+  'browser rather than on a server, because there is no server.';
 
 el('footNote').textContent += ' The statement counts were produced by ' +
   MEASURED_WITH + ': coverage counts statements differently between ' +

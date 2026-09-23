@@ -5,143 +5,117 @@
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](.coveragerc)
 
+A bank export arrives days late, and by then you no longer remember what the
+€14.20 was for. So: tap an amount on a keypad, tap a category, done. Two taps
+for anything you buy often.
+
+### ▶ [Try it now — runs in your browser, nothing to install](https://luke-zhang-cs-py.github.io/tally/app/)
+
+![Tapping 3, 5, 0 so the amount shifts in from the right as 3.50, choosing Coffee, saving, then a second entry — the day's total climbing to €15.90](docs/demo.gif)
+
 **[Read the overview →](https://luke-zhang-cs-py.github.io/tally/)**
-(or open [`docs/index.html`](docs/index.html) directly if the live page
-won't load — it's the same file GitHub Pages serves)
-— the six decisions and what each one is avoiding, and every bug this
-thing has had.
+— the six decisions and what each one is avoiding, and every bug this thing
+has had. (Or open [`docs/index.html`](docs/index.html) locally.)
 
-A phone-first expense tracker. Open it, tap an amount on a keypad, tap a
-category, save. Two taps if it is something you buy often.
-
-Everything stays on your machine. No account, no bank connection, no API key.
+## Run it
 
 ```bash
 pip install -r requirements.txt
 python app.py            # http://127.0.0.1:5005
 ```
 
-To use it from your phone, run it on your laptop and set `HOST=0.0.0.0`, then
-open `http://<your-laptop-ip>:5005`. **There is no login** — anyone on that
-network can read and add expenses, and the app prints that warning on startup.
-A home network is fine; a café is not.
+Everything stays on your machine — no account, no bank connection, no API key.
+To use it from your phone, set `HOST=0.0.0.0` and open
+`http://<your-laptop-ip>:5005`. **There is no login**, so a home network is
+fine and a café is not; the app prints that warning on startup.
 
-## Why this exists next to the wallet app
+## The decisions worth knowing
+
+**A keypad, not a text field.** Digits shift in from the right the way a till
+works: `3`, `5`, `0` gives `3.50`. No decimal point to place and none to get
+wrong, and no keyboard to wait for.
+
+**Two taps for a habit.** Anything bought three or more times in 90 days
+becomes a one-press button carrying its own amount, category and note. A habit
+is a category *and* an amount — "Coffee" is no shortcut if it's sometimes 2.50
+and sometimes 18.
+
+**Currencies are never added together.** A day with €12 and CA$8 shows both,
+stacked. Summing them needs a rate this app doesn't have, and inventing a
+total would be worse than showing two.
+
+**Money is an integer number of cents.** `0.1 + 0.2` is `0.30000000000000004`,
+so a float total disagrees with the entries printed above it — and a reader who
+notices that stops trusting every other figure on the screen.
+
+**Dates are dates, not timestamps.** `datetime` subclasses `date`, so a
+timestamp passes an `isinstance` check untouched and stores as
+`2026-08-31T14:30:00` — which sorts *after* `2026-08-31`, quietly dropping an
+expense from its own month's total. It's coerced, and a test pins it.
+
+## It feeds the wallet app
 
 [Wallet](https://github.com/luke-zhang-cs-py/Budgeting-EU-to-CAD-USD-Automatic)
-does the other half: it reconciles against a bank export and converts each
-purchase at the rate that applied on the day. But a bank export arrives days
-late, and by then you no longer remember what the €14.20 was for.
-
-So this app captures the thing a statement cannot: **what a purchase was,
-while you still know.** It converts nothing and reconciles nothing — the other
-app knows the rates, this one does not.
-
-The `/export.csv` file uses exactly the four column names the wallet importer
-recognises, so it imports without a column mapping:
+does the other half — reconciling against a bank export and converting at the
+rate that applied on the day. `/export.csv` uses exactly the four column names
+its importer expects, so it imports with no column mapping:
 
 ```
 Date,Description,Amount,Currency
 2026-09-08,Coffee - Cafe Nero,-3.50,EUR
 ```
 
-Expenses are written negative, because the far end reads a negative as money
-out. `tests/test_export.py` reads the wallet app's own header lists with `ast`
-and fails if either side renames a column — the two repositories are
-independent, and nothing else would notice.
+`tests/test_export.py` reads the wallet app's own header list and fails if
+either side renames a column — the repos are independent, and nothing else
+would notice.
 
-## The design decisions worth knowing
+## The browser build
 
-**A keypad, not a text field.** Digits shift in from the right the way a till
-works: `3`, `5`, `0` gives `3.50`. There is no decimal point to place and none
-to get wrong, and no keyboard to wait for.
+[`docs/app/`](docs/app/) is the same app with the browser standing in for the
+server: the same `templates/index.html`, `static/css/style.css` and
+`static/js/app.js`, copied byte for byte by `tools/build_static.py` and never
+forked. Tally's server is persistence and nothing else, so persistence is the
+only part replaced — `db.py`, `entries.py` and `export.py` ported to
+`localStorage`, behind a shim answering the routes `app.js` already calls.
 
-**Two taps for a habit.** Anything bought three or more times in the last 90
-days becomes a one-press button carrying its own amount, category and note. A
-habit is a category *and* an amount — "Coffee" is no shortcut if it is
-sometimes 2.50 and sometimes 18.
+```bash
+python tools/build_static.py
+```
 
-**Nothing is lost to a bad connection.** An entry is written to
-`localStorage` *before* the network is touched, and cleared only once the
-server confirms it. Close the tab mid-send, or tap save with the laptop
-asleep, and it sends when you are back. Each entry carries an id the server
-dedupes on, so a queue flushed twice — a retry, a second tab — lands once.
+Entries live in one browser on one device; clearing site data deletes them. The
+CSV export is the way out.
 
-**Currencies are never added together.** A day with €12 and CA$8 in it shows
-both, stacked, not a single number. Summing them needs a rate, and this app
-does not have one; inventing a total would be worse than showing two.
+**What it isn't allowed to give up is the arithmetic.** The published copy is
+the one most people open, and it runs a second implementation of the money code
+that nothing in `tests/` ever loads — so a port that quietly reintroduced a
+float would be invisible exactly where it matters most. The build therefore
+starts a real browser, loads the JavaScript it's about to publish, and runs it
+against the Python: every value through `parse`/`format`/`plain`/`total`
+including error wording, one fixture loaded into both SQLite and localStorage
+with every payload compared field by field, and the whole list of HTTP requests
+replayed against both. Any disagreement and nothing is written.
 
-**Money is an integer number of cents.** `0.1 + 0.2` is
-`0.30000000000000004`, so a float total disagrees with the entries printed
-above it — and a reader who notices that stops trusting every other figure on
-the screen.
-
-**Dates are dates, not timestamps.** `datetime` is a subclass of `date` in
-Python, so a timestamp passes an `isinstance(x, date)` check untouched and
-reaches storage as `2026-08-31T14:30:00`. That string sorts *after*
-`2026-08-31`, so an expense recorded on the last day of a month would vanish
-from its own month's total while every other day looked fine. It is coerced,
-and `tests/test_entries.py` pins it.
-
-## What it does
-
-- A keypad, category chips, an optional note, and a back-date field
-- Today / this week / this month, per currency
-- One-press shortcuts for repeat purchases
-- The last two weeks as a bar chart, and this month by category
-- CSV export for any date range, defaulting to this month
-- A reconcile check: does the file add up to what is stored
-
-### Endpoints
-
-| Route | Does |
-|---|---|
-| `GET /` | the page |
-| `GET /api/overview` | everything the page needs, in one request |
-| `GET /api/entries` | recent entries; `?on=` for one day, `?limit=` |
-| `POST /api/entry` | record one |
-| `POST /api/entries` | flush a queue; per-entry results, max 200 |
-| `DELETE /api/entry/<id>` | remove one |
-| `GET /export.csv` | the file; `?first=` and `?last=` |
-| `GET /api/reconciles` | does the file agree with the database |
-
-A rejected entry in a flushed queue does not fail the batch — the others were
-real expenses, and refusing all of them to reject one loses them.
+That has already paid for itself twice: a `window.localStorage` read outside
+its try/catch that left the store undefined in a private window, and a `?limit=`
+parsed with `Number()` where `app.py` uses `int()`.
 
 ## Your data
 
-`data/tally.db`, a SQLite file, and nothing else. It is a record of what you
-spend, so `data/`, `*.db` and `*.csv` are all in `.gitignore`. If you add
-anything that writes something derived from an entry, add it there in the same
-commit.
-
-Point it somewhere else with `TALLY_DATA=/path/to/folder`.
+`data/tally.db`, a SQLite file, and nothing else. `data/`, `*.db` and `*.csv`
+are all gitignored. Point it elsewhere with `TALLY_DATA=/path/to/folder`.
 
 ## Tests
 
 ```bash
 pytest -q
-pytest -q --cov=. --cov-report=term-missing
 ```
 
-145 tests, 96% of 325 statements -- and those two figures are checked:
-`tests/test_published_figures.py` measures the repository and compares it
-with what the README and the published overview claim, because a figure
-typed into a file goes stale the moment a test is added.
-`python tools/refresh_figures.py` rewrites them.
+145 tests, 96% of 325 statements — both figures checked against the repo, because
+a number typed into a file goes stale the moment a test is added.
 
-The suite is not there for the number. Everything it asserts is something
-that was got wrong first — a minus sign that silently recorded a positive
-expense, a formatter that answered `""` for a null and printed a blank where a
-figure belonged, a queue that doubled on retry. Where a test guards a
-structural property, it has been run against a deliberately broken copy of the
-code to confirm it fails; a guard nobody has watched fail is worth nothing.
-
-They all run when the wallet app is checked out beside this one. On CI, and on
-a machine with only this repository, the two cross-repo column checks skip
-instead — `pytest -q -rs` says so rather than passing quietly. They are the
-ones that would catch a renamed CSV column, so they matter most on the machine
-where a rename would actually be made, which is a local one.
+The suite isn't there for the number. Everything it asserts is something that
+was got wrong first: a minus sign that silently recorded a positive expense, a
+formatter that answered `""` for a null, a queue that doubled on retry.
 
 ## License
 
