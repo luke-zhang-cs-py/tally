@@ -114,6 +114,9 @@ tools/        the browser build and the figure refresh
 directory two levels up for the same reason it exists at all: `data/` belongs
 beside the project, not inside a package.
 
+`notes/` holds the long-form write-ups — `CODE_AUDIT.md` — and
+`CONTRIBUTING.md` is in `.github/`, which is where GitHub looks for it.
+
 ## Your data
 
 `data/tally.db`, a SQLite file, and nothing else. `data/`, `*.db` and `*.csv`
