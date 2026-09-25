@@ -21,8 +21,8 @@ import csv
 import datetime as dt
 import io
 
-import entries
-import money
+from domain import entries
+from domain import money
 
 # Exactly the names the wallet app's importer looks for. Not decoration: any
 # other spelling means somebody has to correct the column mapping by hand.

@@ -27,7 +27,7 @@ import os
 import sqlite3
 import threading
 
-import paths
+from core import paths
 
 DB_NAME = "tally.db"
 

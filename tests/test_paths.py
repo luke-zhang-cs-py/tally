@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import paths   # noqa: E402
+from core import paths   # noqa: E402
 
 
 def test_an_explicit_directory_wins(tmp_path, monkeypatch):
@@ -29,17 +29,22 @@ def test_the_environment_is_next(tmp_path, monkeypatch):
     assert paths.data_dir() == str(tmp_path)
 
 
-def test_the_default_is_data_beside_the_code(monkeypatch):
+def test_the_default_is_data_at_the_project_root(monkeypatch):
     """What a person who just clones this and runs it gets, so it is worth
-    stating: `data/` next to the modules, which is the path .gitignore
-    excludes. Every other test in this suite sets TALLY_DATA, so without
-    clearing it here this line is never executed by anything.
+    stating: `data/` at the top of the checkout, which is the path
+    .gitignore excludes. Every other test in this suite sets TALLY_DATA, so
+    without clearing it here this line is never executed by anything.
+
+    Asserted against the project root and not against this module's own
+    directory, because those stopped being the same thing when paths.py moved
+    into core/ -- and a data directory that quietly became core/data would
+    look like an empty ledger rather than like a bug.
     """
     monkeypatch.delenv(paths.ENV_VAR, raising=False)
     got = paths.data_dir()
     assert os.path.basename(got) == paths.DEFAULT_DIRNAME
-    assert os.path.dirname(got) == os.path.dirname(
-        os.path.abspath(paths.__file__))
+    root = os.path.dirname(os.path.dirname(os.path.abspath(paths.__file__)))
+    assert os.path.dirname(got) == root
     assert os.path.isabs(got), "a relative path depends on the working " \
         "directory, so the app would use a different folder per launch"
 

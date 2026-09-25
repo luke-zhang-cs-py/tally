@@ -17,9 +17,9 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import db        # noqa: E402
-import entries   # noqa: E402
-import export    # noqa: E402
+from core import db        # noqa: E402
+from domain import entries   # noqa: E402
+from domain import export    # noqa: E402
 
 
 @pytest.fixture

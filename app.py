@@ -20,10 +20,10 @@ import os
 
 from flask import Flask, Response, jsonify, render_template, request
 
-import db
-import entries
-import export
-import money
+from core import db
+from domain import entries
+from domain import export
+from domain import money
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "5005"))

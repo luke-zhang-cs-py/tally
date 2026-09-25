@@ -99,6 +99,21 @@ That has already paid for itself twice: a `window.localStorage` read outside
 its try/catch that left the store undefined in a private window, and a `?limit=`
 parsed with `Number()` where `app.py` uses `int()`.
 
+## Layout
+
+```
+app.py        the Flask entry point, and the only module left in the root
+core/         paths.py, db.py      where the data lives, and the one table
+domain/       money.py, entries.py, export.py
+              the rules: integer cents, recording and querying, the CSV
+tools/        the browser build and the figure refresh
+```
+
+`app.py` stays at the root because `Flask(__name__)` resolves `templates/` and
+`static/` relative to its own directory. `core/paths.py` resolves the data
+directory two levels up for the same reason it exists at all: `data/` belongs
+beside the project, not inside a package.
+
 ## Your data
 
 `data/tally.db`, a SQLite file, and nothing else. `data/`, `*.db` and `*.csv`
@@ -110,7 +125,7 @@ are all gitignored. Point it elsewhere with `TALLY_DATA=/path/to/folder`.
 pytest -q
 ```
 
-145 tests, 96% of 325 statements — both figures checked against the repo, because
+145 tests, 96% of 326 statements — both figures checked against the repo, because
 a number typed into a file goes stale the moment a test is added.
 
 The suite isn't there for the number. Everything it asserts is something that

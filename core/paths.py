@@ -26,5 +26,7 @@ def data_dir(directory=None):
     """
     if directory:
         return directory
-    return os.environ.get(ENV_VAR) or os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), DEFAULT_DIRNAME)
+    # Two dirnames, not one: this module lives in core/, and the data
+    # directory belongs beside the project rather than inside a package.
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.environ.get(ENV_VAR) or os.path.join(root, DEFAULT_DIRNAME)

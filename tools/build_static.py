@@ -10,12 +10,13 @@ edited. A hand-maintained fork of a 435-line app.js is a fork that looks like
 a copy, and it rots the first time somebody fixes a bug in one of them.
 
 What the build adds is the server. Tally's server is persistence and nothing
-else: app.py is eight thin routes over db.py, entries.py, export.py and
-money.py, and none of it needs a network. So the browser build replaces SQLite
+else: app.py is eight thin routes over core/db.py, domain/entries.py,
+domain/export.py and domain/money.py, and none of it needs a network. So the browser build replaces SQLite
 with localStorage and answers app.js's own requests inside the page:
 
-    tools/static_src/js/money.js       money.py, ported
-    tools/static_src/js/store.js       db.py + entries.py + export.py, ported
+    tools/static_src/js/money.js       domain/money.py, ported
+    tools/static_src/js/store.js       core/db.py + domain/entries.py
+                                       + domain/export.py, ported
     tools/static_src/js/static-api.js  app.py's routes, as a fetch shim
     tools/static_src/js/static-ui.js   the export button and the storage note
 
@@ -369,7 +370,7 @@ def money_cases():
 
 
 def money_in_python(cases):
-    import money
+    from domain import money
 
     out = []
     for case in cases:
@@ -658,9 +659,9 @@ EXPORT_CALLS = [
 
 def check_queries(page):
     """The whole of entries.py and export.py, over one fixture, both ways."""
-    import db
-    import entries
-    import export
+    from core import db
+    from domain import entries
+    from domain import export
 
     calls = ([{"name": name, "fn": js, "args": args}
               for name, _py, js, args in STORE_CALLS]
@@ -723,9 +724,9 @@ def check_queries(page):
 def overview_payload(conn, on):
     """app.py's /api/overview body, built here so the shape is compared even
     though this pass does not go through Flask."""
-    import entries
-    import export
-    import money
+    from domain import entries
+    from domain import export
+    from domain import money
     return {
         "today": entries.today().isoformat(),
         "totals": entries.totals(conn, on),
@@ -787,8 +788,8 @@ def refuse_ties(payloads):
 def check_routes(page):
     """The same requests, to Flask and to the shim, with the same state."""
     import app as flask_app
-    import db
-    import entries
+    from core import db
+    from domain import entries
 
     wanted = [{"method": method, "url": url, "body": body,
                "csv": url.startswith("/export.csv")}

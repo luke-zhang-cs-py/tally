@@ -360,12 +360,14 @@ footer a { color: inherit; }
  * and `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'app.py',     lines: 229, stmts: 105, missed:  6, does: 'the HTTP surface; eight routes, loopback by default' },
-  { name: 'entries.py', lines: 279, stmts:  97, missed:  6, does: 'recording, querying, the habits, and the date coercion' },
-  { name: 'export.py',  lines: 126, stmts:  49, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
-  { name: 'money.py',   lines: 126, stmts:  41, missed:  0, does: 'integer cents; one parser and one formatter' },
-  { name: 'db.py',      lines:  96, stmts:  26, missed:  0, does: 'the schema, and the additive migration' },
-  { name: 'paths.py',   lines:  30, stmts:   7, missed:  0, does: 'where the data lives — one decision, one place' }
+  { name: 'app.py',             lines: 229, stmts: 105, missed:  6, does: 'the HTTP surface; eight routes, loopback by default' },
+  { name: 'domain/entries.py',  lines: 279, stmts:  97, missed:  6, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'domain/export.py',   lines: 126, stmts:  49, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
+  { name: 'domain/money.py',    lines: 126, stmts:  41, missed:  0, does: 'integer cents; one parser and one formatter' },
+  { name: 'core/db.py',         lines:  96, stmts:  26, missed:  0, does: 'the schema, and the additive migration' },
+  { name: 'core/paths.py',      lines:  32, stmts:   8, missed:  0, does: 'where the data lives — one decision, one place' },
+  { name: 'core/__init__.py',   lines:   6, stmts:   0, missed:  0, does: 'the package: which directory, and which row' },
+  { name: 'domain/__init__.py', lines:   6, stmts:   0, missed:  0, does: 'the package: the rules, with no Flask in them' }
 ];
 
 var TESTS = [
@@ -377,7 +379,7 @@ var TESTS = [
   { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 1574;
+var TEST_LINES = 1579;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

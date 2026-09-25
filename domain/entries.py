@@ -24,8 +24,8 @@ import datetime as dt
 import sqlite3
 import uuid
 
-import db
-import money
+from core import db
+from domain import money
 
 # How far back `usual` looks. Long enough that a monthly habit shows up, short
 # enough that last spring's holiday coffees are not still on the keypad.

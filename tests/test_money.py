@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import money  # noqa: E402
+from domain import money  # noqa: E402
 
 
 @pytest.mark.parametrize("text,cents", [
