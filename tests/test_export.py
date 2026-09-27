@@ -8,7 +8,6 @@ because nothing else would notice the day one end renames a column.
 """
 import ast
 import csv
-import datetime as dt
 import io
 import os
 import sys
@@ -47,6 +46,27 @@ def test_the_columns_are_the_ones_the_other_app_recognises(conn):
     assert text.splitlines()[0] == "Date,Description,Amount,Currency"
 
 
+# Where the wallet app keeps its header lists: ingest/ since it grouped its
+# root modules into packages, the root before that. Both, because a checkout
+# of either age is a wallet app -- and looking only at the old place made
+# the contract test skip, which reads exactly like the wallet app being
+# absent, for as long as nobody counted the skips.
+WALLET_LAYOUTS = (("ingest", "layout.py"), ("layout.py",))
+
+
+def _wallet_root():
+    return os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), "wallet-fx-budget")
+
+
+def _wallet_layout():
+    for parts in WALLET_LAYOUTS:
+        source = os.path.join(_wallet_root(), *parts)
+        if os.path.isfile(source):
+            return source
+    return None
+
+
 def _wallet_name_lists():
     """The header-name tuples from the wallet app's layout.py.
 
@@ -62,10 +82,8 @@ def _wallet_name_lists():
     column removed from the list it was supposed to be checking. Reading the
     assignments is the only version of this that can fail.
     """
-    wallet = os.path.join(os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__)))), "wallet-fx-budget")
-    source = os.path.join(wallet, "layout.py")
-    if not os.path.isfile(source):
+    source = _wallet_layout()
+    if source is None:
         return None
 
     tree = ast.parse(io.open(source, encoding="utf-8").read())
@@ -190,27 +208,6 @@ def test_the_range_defaults_to_this_month(conn):
     assert len(rows_of(export.as_csv(conn))) == 1
 
 
-def test_the_month_helper_finds_the_ends(conn):
-    assert export.month_of("2026-09-15") == (dt.date(2026, 9, 1),
-                                             dt.date(2026, 9, 30))
-    assert export.month_of("2026-02-10") == (dt.date(2026, 2, 1),
-                                             dt.date(2026, 2, 28))
-    assert export.month_of("2028-02-10")[1] == dt.date(2028, 2, 29)
-
-
-def test_december_rolls_into_the_next_year(conn):
-    """The off-by-one that would otherwise make December's export end on the
-    31st of a month that does not exist."""
-    assert export.month_of("2026-12-15") == (dt.date(2026, 12, 1),
-                                             dt.date(2026, 12, 31))
-
-
-def test_the_month_helper_defaults_to_now(conn):
-    first, last = export.month_of()
-    assert first.day == 1
-    assert first <= entries.today() <= last
-
-
 # ----------------------------------------------------------- the filename
 
 def test_the_filename_says_what_it_holds(conn):
@@ -252,3 +249,38 @@ def test_the_summary_of_nothing_is_zero_not_an_error(conn):
     out = export.summary(conn, "2026-09-01", "2026-09-30")
     assert out["entries"] == 0
     assert out["cents"] == 0
+
+
+def test_a_checked_out_wallet_app_is_never_mistaken_for_a_missing_one():
+    """The contract test above skips when the wallet app is absent. It
+    skipped for a week with the wallet app right there, because layout.py
+    had moved into ingest/ -- so a skip has to mean the checkout is missing,
+    not that this file lost track of it."""
+    if not os.path.isdir(_wallet_root()):
+        pytest.skip("the wallet app is not checked out beside this one")
+    assert _wallet_layout(), (
+        "wallet-fx-budget is here but none of %s is -- its header lists "
+        "moved again" % ", ".join("/".join(p) for p in WALLET_LAYOUTS))
+
+
+# ------------------------------------------------------ formula injection
+
+@pytest.mark.parametrize("category", ["=HYPERLINK(\"http://x\",\"a\")",
+                                      "+1+1", "-2+3", "@SUM(A1)",
+                                      "=1+1"])
+def test_a_description_is_never_a_formula(conn, category):
+    """A category is any string, and with HOST=0.0.0.0 and no login anyone
+    on the network can type one. Opened in Excel, "=HYPERLINK(...)" in the
+    Description column is a live formula, not text. A leading apostrophe
+    is how a spreadsheet is told a cell is text; the wallet app imports it
+    as one more character of description."""
+    spend(conn, "3.50", category)
+    row = rows_of(export.as_csv(conn, "2026-09-01", "2026-09-30"))[0]
+    assert row["Description"] == "'" + category
+    assert export.reconciles(conn, "2026-09-01", "2026-09-30")[0]
+
+
+def test_an_ordinary_description_is_left_alone(conn):
+    spend(conn, "3.50", "Coffee", note="=not a formula here")
+    row = rows_of(export.as_csv(conn, "2026-09-01", "2026-09-30"))[0]
+    assert row["Description"] == "Coffee - =not a formula here"

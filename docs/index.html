@@ -353,33 +353,33 @@ footer a { color: inherit; }
 /* Every number on this page is read from here, so the tiles, the charts and
  * the table cannot drift apart.
  *
- * Measured on 12 September 2026 in the repository: `pytest -q --cov` for the
+ * Measured on 27 September 2026 in the repository: `pytest -q --cov` for the
  * statements and what is uncovered, `wc -l` for length, and `pytest
  * --collect-only -q` for the test counts. Not estimated.
  * tests/test_published_figures.py checks them against a fresh measurement,
  * and `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'app.py',             lines: 229, stmts: 105, missed:  6, does: 'the HTTP surface; eight routes, loopback by default' },
-  { name: 'domain/entries.py',  lines: 279, stmts:  97, missed:  6, does: 'recording, querying, the habits, and the date coercion' },
-  { name: 'domain/export.py',   lines: 126, stmts:  49, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
-  { name: 'domain/money.py',    lines: 126, stmts:  41, missed:  0, does: 'integer cents; one parser and one formatter' },
-  { name: 'core/db.py',         lines:  96, stmts:  26, missed:  0, does: 'the schema, and the additive migration' },
+  { name: 'app.py',             lines: 245, stmts: 106, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
+  { name: 'domain/entries.py',  lines: 306, stmts: 105, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'domain/money.py',    lines: 153, stmts:  48, missed:  0, does: 'integer cents; one parser and one formatter' },
+  { name: 'domain/export.py',   lines: 121, stmts:  37, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
+  { name: 'core/db.py',         lines:  96, stmts:  26, missed:  0, does: 'the one table, and a connection that really closes' },
   { name: 'core/paths.py',      lines:  32, stmts:   8, missed:  0, does: 'where the data lives — one decision, one place' },
   { name: 'core/__init__.py',   lines:   6, stmts:   0, missed:  0, does: 'the package: which directory, and which row' },
   { name: 'domain/__init__.py', lines:   6, stmts:   0, missed:  0, does: 'the package: the rules, with no Flask in them' }
 ];
 
 var TESTS = [
-  { file: 'test_money.py',             n: 42, of: 'both decimal conventions, and never a silent zero' },
-  { file: 'test_entries.py',           n: 37, of: 'the queries, the habits, and the month boundary' },
-  { file: 'test_app.py',               n: 29, of: 'the routes, the queue, and the rejected-entry rule' },
-  { file: 'test_export.py',            n: 21, of: 'the file, the reconcile, and the wallet’s column names' },
+  { file: 'test_money.py',             n: 61, of: 'both decimal conventions, and never a silent zero' },
+  { file: 'test_entries.py',           n: 55, of: 'the queries, the habits, and the month boundary' },
+  { file: 'test_app.py',               n: 53, of: 'the routes, the queue, and the rejected-entry rule' },
+  { file: 'test_export.py',            n: 25, of: 'the file, the reconcile, and the wallet’s column names' },
   { file: 'test_published_figures.py', n: 11, of: 'the numbers on this page, against a fresh measurement' },
   { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 1579;
+var TEST_LINES = 1860;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
@@ -437,7 +437,25 @@ var BUGS = [
    'The same pass', 'fixed'],
   ['One mapping written out twice',
    'The six-field entry mapping appeared in both the single save and the queue loop, which is how a field added to one path and forgotten in the other makes entries recorded offline arrive without their note — looking as though they were typed that way. Extracted, and the function that held both went from complexity 13 to something readable.',
-   'An audit pass. Not wrong yet, which is the point', 'fixed']
+   'An audit pass. Not wrong yet, which is the point', 'fixed'],
+  ['A whole-number amount skipped every check',
+   'The parser returned <code>0</code> and <code>-5</code> as 0 and -500 cents before testing either. SQLite&rsquo;s CHECK caught them as a raw error &mdash; a 500 that took a whole offline queue into quarantine &mdash; and the browser build, which has no CHECK, would have stored a negative expense.',
+   'Posting JSON numbers rather than keypad strings', 'fixed'],
+  ['<code>1e3</code> was recorded as 13.00',
+   'Everything but digits and separators was stripped, so the digits either side of the <code>e</code> were joined. A letter between two digits is refused now, and so is anything past the keypad&rsquo;s own 999,999.99, which used to overflow SQLite.',
+   'The same pass', 'fixed'],
+  ['Any website could add expenses',
+   '<code>/api/entry</code> accepted a form post, and a cross-site form needs no preflight &mdash; so with no login, any page open in the same browser could write to a Tally on 127.0.0.1. JSON only now; nothing in the page ever sent a form.',
+   'A CSRF check of each state-changing route', 'fixed'],
+  ['A category could be a spreadsheet formula',
+   'A Description starting <code>=</code>, <code>+</code>, <code>-</code> or <code>@</code> runs as a formula when the export is opened in Excel. It gets a leading apostrophe now, in both builds.',
+   'A CSV-injection check of /export.csv', 'fixed'],
+  ['The habit window was 91 days',
+   '<code>today - 90</code> counted one day more than the constant says. It is 90 counting today now, the way the daily bars already counted.',
+   'Checking the window at its edge', 'fixed'],
+  ['The wallet contract test had been skipping',
+   'The wallet app moved <code>layout.py</code> into <code>ingest/</code>, and a missing file reads exactly like a missing checkout. It looks in both places, and a separate test fails if the wallet app is present but its lists are not found.',
+   'Counting the skips', 'fixed']
 ];
 
 var LIMITS = [
@@ -641,7 +659,7 @@ el('tableBtn').addEventListener('click', function () {
 });
 
 el('footNote').textContent =
-  'Figures measured on 12 September 2026 in the repository with pytest ' +
+  'Figures measured on 27 September 2026 in the repository with pytest ' +
   '--cov, wc -l and pytest --collect-only, and checked against a fresh ' +
   'measurement by tests/test_published_figures.py, because a page like this ' +
   'goes stale the moment a test is added. Everything here is read from one ' +

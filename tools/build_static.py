@@ -203,6 +203,20 @@ FIXTURE = [
     ("c26", "2026-03-03", "2.80", "Coffee", "flat white", "EUR"),
     ("c27", "2026-03-07", "2.80", "Coffee", "flat white", "EUR"),
     ("c28", "2026-03-10", "2.80", "Coffee", "flat white", "EUR"),
+
+    # Categories a spreadsheet would run as formulas, and a note holding a
+    # bare \r -- which Python's csv quotes and a hand-written writer that
+    # only checks for \n does not.
+    ("c29", "2026-03-08", "1.07", "=SUM(A1)", "", "EUR"),
+    ("c30", "2026-03-08", "1.13", "@home", "", "EUR"),
+    ("c31", "2026-03-08", "2.22", "Other", "line\rbreak", "EUR"),
+
+    # The edge of the habit window: exactly USUAL_WINDOW_DAYS before
+    # FIXED_TODAY, which is one day outside "90 days counting today". A
+    # port that counted `on - 90` would offer this as a button.
+    ("c32", "2025-12-18", "5.55", "Drinks", "edge", "EUR"),
+    ("c33", "2025-12-18", "5.55", "Drinks", "edge", "EUR"),
+    ("c34", "2025-12-18", "5.55", "Drinks", "edge", "EUR"),
 ]
 
 
@@ -262,6 +276,38 @@ REQUESTS = [
                             "category": "Lunch", "date": "the 4th"}),
     ("POST", "/api/entry", {"clientId": "w08", "amount": None,
                             "category": "Lunch"}),
+
+    # What a caller other than the keypad can send. Each was a 500 in Flask
+    # or a different answer in the shim before the two were made to agree.
+    ("POST", "/api/entry", {"clientId": "w09", "amount": 0,
+                            "category": "Lunch", "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w10", "amount": -5,
+                            "category": "Lunch", "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w11", "amount": 10 ** 20,
+                            "category": "Lunch", "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w12", "amount": "1e3",
+                            "category": "Lunch", "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w13", "amount": "1.00",
+                            "category": 5, "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w14", "amount": "1.00",
+                            "category": "Lunch", "note": True,
+                            "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": 15, "amount": "1.00",
+                            "category": "Lunch", "date": "2026-03-18"}),
+    ("POST", "/api/entry", {"clientId": "w16", "amount": "1.19",
+                            "category": "Lunch", "currency": 5,
+                            "date": "2026-03-18"}),
+    ("POST", "/api/entry", [1, 2]),
+    ("POST", "/api/entry", "text"),
+    ("POST", "/api/entries", [1, 2]),
+    ("POST", "/api/entries", {"entries": [
+        {"clientId": "q10", "amount": 0, "category": "Coffee",
+         "date": "2026-03-18"},
+        {"clientId": "q11", "amount": "2.00", "category": 7,
+         "date": "2026-03-18"},
+        {"clientId": "q12", "amount": "0.35", "category": "Snacks",
+         "date": "2026-03-18"},
+    ]}),
     ("POST", "/api/entries", {"entries": "not a list"}),
     ("POST", "/api/entries", {}),
     ("POST", "/api/entries", {"entries": []}),
@@ -326,7 +372,9 @@ def money_cases():
         "99999999", "0.99", " 7.25 ", "\t3.30\n", "1.999", "++5", "5%",
         "5.5.5", ",", ".", "..", "1..2", "0.", "000.10", "1'000.20",
         "it's 3.50", 'say "4.50"', True, False,
-        0, 1, 7, -1, 1234567, 99999999,
+        "1E3", "1e+5", "12abc34", "12.00 EUR", "999999.99", "1000000.00",
+        "100000000000000000000",
+        0, 1, 7, -1, -5, 999999, 1000000, 1234567, 99999999,
         12.34, 0.5, 0.1, 0.25, 1.05, 99999999.99, 0.30000000000000004,
     ]
     # And every amount from 0.00 to 4.99 plus a spread above it, written the
@@ -344,9 +392,10 @@ def money_cases():
     symbols = ["EUR", "CAD", "USD", "JPY", "GBP", "", " eur ", "eur", "xyz",
                "constructor", "toString", "__proto__", "\u20ac", "EURO",
                "  ", "usd"]
-    # `known(True)` is not here either: `(True or "").strip()` is an
-    # AttributeError in Python, and a bool is not a currency code in any case.
-    codes = symbols + [None, 0, False]
+    # Not-text is here now: `known` used to call .strip() on whatever it was
+    # given, so `known(True)` was an AttributeError in Python and "EUR" in
+    # the browser. Both fall back now, which is what `known` is for.
+    codes = symbols + [None, 0, False, True, 5, 1.5, ["EUR"]]
     amounts = [0, 1, 5, 9, 10, 11, 50, 99, 100, 101, 250, 999, 1000, 1001,
                9999, 10000, 99999, 100000, 100001, 999999, 1000000,
                12345678, 123456789, 999999999, -1, -9, -100, -1234, -999999,

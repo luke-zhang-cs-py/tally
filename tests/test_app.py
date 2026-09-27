@@ -310,3 +310,117 @@ def test_binding_wider_stays_possible_on_purpose(monkeypatch):
     finally:
         monkeypatch.undo()
         importlib.reload(web)
+
+
+# ------------------------------------------------ what a caller can send
+
+@pytest.mark.parametrize("fields,why", [
+    ({"amount": 0, "category": "Coffee"}, "a JSON zero"),
+    ({"amount": -5, "category": "Coffee"}, "a JSON negative"),
+    ({"amount": 10 ** 20, "category": "Coffee"}, "past SQLite's integer"),
+    ({"amount": "1e3", "category": "Coffee"}, "an exponent"),
+    ({"amount": "3.50", "category": 5}, "a numeric category"),
+    ({"amount": "3.50", "category": "Coffee", "note": 5}, "a numeric note"),
+    ({"amount": "3.50", "category": "Coffee", "clientId": 5}, "a numeric id"),
+])
+def test_a_badly_typed_entry_is_a_400_not_a_500(client, fields, why):
+    reply = post(client, "/api/entry", **fields)
+    assert reply.status_code == 400, why
+    assert reply.get_json()["error"]
+
+
+def test_a_numeric_currency_falls_back_rather_than_failing(client):
+    reply = post(client, "/api/entry", amount="3.50", category="Coffee",
+                 currency=5, clientId="c5")
+    assert reply.status_code == 201
+    assert client.get("/api/entries").get_json()["entries"][0][
+        "currency"] == "EUR"
+
+
+def test_a_badly_typed_entry_does_not_take_its_queue_with_it(client):
+    """A 500 here is the worst outcome available: app.js reads any answer
+    other than per-entry results as the batch being refused, and quarantines
+    all of it -- including the real expenses queued beside the bad one."""
+    reply = client.post("/api/entries", json={"entries": [
+        {"clientId": "q1", "amount": "3.50", "category": "Coffee"},
+        {"clientId": "q2", "amount": 0, "category": "Broken"},
+        {"clientId": "q3", "amount": "2.00", "category": 7},
+        {"clientId": "q4", "amount": "5.00", "category": "Snacks"},
+    ]})
+    assert reply.status_code == 200
+    assert [r["result"] for r in reply.get_json()["results"]] == [
+        "added", "rejected", "rejected", "added"]
+
+
+@pytest.mark.parametrize("url", ["/api/entry", "/api/entries"])
+@pytest.mark.parametrize("body", [[1, 2], "text", 5])
+def test_a_body_that_is_not_an_object_is_a_400(client, url, body):
+    """`body.get` on a JSON list was an AttributeError, a 500."""
+    reply = client.post(url, json=body)
+    assert reply.status_code == 400
+    assert reply.get_json()["error"]
+
+
+def test_a_form_post_from_another_site_records_nothing(client):
+    """There is no login, so the only thing between any web page and this
+    ledger is the browser's same-origin rules. A JSON body forces a
+    preflight this app never answers; a form post does not, and /api/entry
+    used to accept one -- so any site open in the same browser could add
+    expenses to a Tally on 127.0.0.1. Nothing in app.js sends a form."""
+    reply = client.post("/api/entry", data={
+        "amount": "3.50", "category": "Coffee", "clientId": "csrf"})
+    assert reply.status_code == 400
+    assert client.get("/api/entries").get_json()["entries"] == []
+
+
+def test_json_sent_as_plain_text_records_nothing_either(client):
+    """text/plain is the other content type a page can send cross-site
+    without a preflight."""
+    reply = client.post("/api/entry", data=json.dumps({
+        "amount": "3.50", "category": "Coffee", "clientId": "csrf"}),
+        content_type="text/plain")
+    assert reply.status_code == 400
+    assert client.get("/api/entries").get_json()["entries"] == []
+
+
+@pytest.mark.parametrize("url", ["/api/overview?on=nonsense",
+                                 "/api/entries?on=2026-02-30",
+                                 "/api/entries?limit=1.0",
+                                 "/api/entries?limit=abc"])
+def test_a_read_with_a_bad_query_is_a_400(client, url):
+    reply = client.get(url)
+    assert reply.status_code == 400
+    assert reply.get_json()["error"]
+
+
+# ----------------------------------------------------- one number, three files
+
+def _read(*parts):
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, *parts), encoding="utf-8") as handle:
+        return handle.read()
+
+
+@pytest.mark.parametrize("where", [("static", "js", "app.js"),
+                                   ("tools", "static_src", "js",
+                                    "static-api.js")])
+def test_the_queue_cap_is_the_same_everywhere(where):
+    """app.js chunks its queue by this so a long one drains instead of
+    wedging on "more than 200 at once"; the shim refuses by it. Three
+    copies of one number are only safe if something compares them."""
+    import re
+    found = re.search(r"var MAX_QUEUED = (\d+);", _read(*where))
+    assert found, "MAX_QUEUED moved in %s" % "/".join(where)
+    assert int(found.group(1)) == web.MAX_QUEUED
+
+
+def test_every_request_in_the_page_checks_its_answer():
+    """The delete handler called fetch() directly and said "Deleted." for
+    whatever came back -- a 404 for an entry another tab had removed, or a
+    500. api() is the one place a reply's status is read."""
+    import re
+    # Comments out first: two of them say "fetch()" in prose.
+    script = re.sub(r"/\*.*?\*/", "", _read("static", "js", "app.js"),
+                    flags=re.S)
+    assert len(re.findall(r"\bfetch\(", script)) == 1, (
+        "a fetch() outside api() does not check reply.ok")

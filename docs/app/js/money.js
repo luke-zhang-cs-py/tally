@@ -30,9 +30,9 @@
        file cannot tell those apart and takes the int branch for any integral
        number. The build's case list therefore holds no integral floats.
      * Python integers are unbounded. Above 2**53 cents — ninety trillion euro
-       — this loses precision and money.py does not. The keypad stops at
-       99999999 cents, so nothing in the app can reach it, but it is a
-       difference and not a rounding.
+       — this loses precision and money.py does not. `parse` refuses anything
+       over MAX_CENTS on both sides, so no stored amount can reach it; only
+       `format`, `plain` or `total` handed such a number directly could.
      * Python's `\d` matches every Unicode decimal digit; JavaScript's matches
        0-9. So money.py reads an Arabic-Indic '٠' as a zero and this file
        strips it as punctuation. Both refuse the amount; they disagree about
@@ -56,7 +56,15 @@ var TallyMoney = (function () {
   var MINOR_UNITS = 2;
   var SCALE = Math.pow(10, MINOR_UNITS);
 
+  /* money.py: the keypad's ceiling, and the server's. */
+  var MAX_CENTS = 99999999;
+
   var ALLOWED = /[^\d.,]/g;
+
+  /* money.py: a letter between two digits -- "1e3", "12abc34" -- is not one
+     number. The strip would join the digits either side, reading "1e3" as
+     13.00. ASCII letters on both sides, so both refuse the same inputs. */
+  var LETTER_INSIDE = /\d[A-Za-z]+\+?\d/;
 
   /* money.py raises MoneyError, a ValueError subclass. The shim in
      static-api.js turns one into a 400 with the same body the Flask app
@@ -105,13 +113,18 @@ var TallyMoney = (function () {
        through to the text path in money.py and fail there for having no
        digits, so they must fall through here too. */
     if (typeof text === 'number' && isFinite(text) && Math.floor(text) === text) {
-      return text * SCALE;
+      /* Through the same bounds as text: `0` and `-5` used to come straight
+         back as 0 and -500, and here there is no CHECK constraint to catch
+         them -- a negative expense would simply have been stored. */
+      return bounded(text * SCALE);
     }
 
     var raw = String(text);
     /* Caught before the strip, because the strip removes it: "-5" became 5,
        so typing a minus recorded a five-euro expense instead of refusing. */
     if (raw.indexOf('-') >= 0) throw MoneyError('an expense is a positive amount');
+
+    if (LETTER_INSIDE.test(raw)) throw MoneyError('cannot read ' + repr(text));
 
     var cleaned = raw.replace(ALLOWED, '').replace(/,/g, '.');
     if (!/\d/.test(cleaned)) throw MoneyError('no digits in ' + repr(text));
@@ -125,8 +138,15 @@ var TallyMoney = (function () {
                        ' decimal places');
     }
 
-    var cents = Number(whole || 0) * SCALE + Number((fraction + '00').slice(0, MINOR_UNITS));
+    return bounded(Number(whole || 0) * SCALE +
+                   Number((fraction + '00').slice(0, MINOR_UNITS)));
+  }
+
+  function bounded(cents) {
     if (cents <= 0) throw MoneyError('an amount has to be more than nothing');
+    if (cents > MAX_CENTS) {
+      throw MoneyError('more than ' + plain(MAX_CENTS) + ' is not one expense');
+    }
     return cents;
   }
 
@@ -168,7 +188,7 @@ var TallyMoney = (function () {
   function known(currency) {
     /* Falls back rather than raising: losing the entry is worse than filing
        it in euros and letting it be corrected. */
-    var code = String(currency ? currency : '').trim().toUpperCase();
+    var code = typeof currency === 'string' ? currency.trim().toUpperCase() : '';
     return CURRENCIES.indexOf(code) >= 0 ? code : DEFAULT_CURRENCY;
   }
 
@@ -177,6 +197,7 @@ var TallyMoney = (function () {
     DEFAULT_CURRENCY: DEFAULT_CURRENCY,
     SYMBOLS: SYMBOLS,
     MINOR_UNITS: MINOR_UNITS,
+    MAX_CENTS: MAX_CENTS,
     MoneyError: MoneyError,
     repr: repr,
     parse: parse,

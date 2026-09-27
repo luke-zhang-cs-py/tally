@@ -18,7 +18,6 @@ Expenses are written negative. The wallet app treats a negative amount as
 money out, and it is a spending tracker on both sides.
 """
 import csv
-import datetime as dt
 import io
 
 from domain import entries
@@ -28,13 +27,16 @@ from domain import money
 # other spelling means somebody has to correct the column mapping by hand.
 COLUMNS = ["Date", "Description", "Amount", "Currency"]
 
+# What a spreadsheet reads as the start of a formula. A category is any string
+# and, with HOST=0.0.0.0 and no login, anyone on the network can type one; a
+# Description of "=HYPERLINK(...)" is a live formula the moment the file is
+# opened in Excel.
+FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
+
 
 def as_csv(connection, first=None, last=None):
     """Every entry in the range, as a string."""
-    day = entries.today()
-    first = entries.as_date(first or day.replace(day=1))
-    last = entries.as_date(last or day)
-
+    first, last = entries.month_so_far(first, last)
     rows = connection.execute(
         "SELECT spent_on, amount, currency, category, note FROM entries "
         "WHERE spent_on BETWEEN ? AND ? ORDER BY spent_on, id",
@@ -68,14 +70,16 @@ def _description(category, note):
     # will re-save it in the local codepage and mangle anything outside ASCII.
     # Typographic niceness is not worth a class of encoding bug in a file
     # nobody reads for pleasure.
-    return f"{category} - {note}" if note else category
+    text = f"{category} - {note}" if note else category
+    # A leading apostrophe is how a spreadsheet is told a cell is text. The
+    # wallet app imports it as one more character of description, which is
+    # a much smaller cost than a formula running on somebody's machine.
+    return "'" + text if text.startswith(FORMULA_STARTS) else text
 
 
 def filename(first=None, last=None):
     """A name that sorts and says what it holds."""
-    day = entries.today()
-    first = entries.as_date(first or day.replace(day=1))
-    last = entries.as_date(last or day)
+    first, last = entries.month_so_far(first, last)
     if first == last:
         return f"tally-{first.isoformat()}.csv"
     return f"tally-{first.isoformat()}-to-{last.isoformat()}.csv"
@@ -92,35 +96,26 @@ def reconciles(connection, first=None, last=None):
     from_file = money.total(money.parse(row["Amount"].lstrip("-"))
                             for row in rows if row["Amount"])
 
-    day = entries.today()
-    lo = entries.as_date(first or day.replace(day=1)).isoformat()
-    hi = entries.as_date(last or day).isoformat()
-    stored = connection.execute(
-        "SELECT COALESCE(SUM(amount), 0) AS cents FROM entries "
-        "WHERE spent_on BETWEEN ? AND ?", (lo, hi)).fetchone()["cents"]
+    stored = _stored(connection, first, last)["cents"]
     return from_file == stored, from_file, stored
 
 
 def summary(connection, first=None, last=None):
     """What the export would contain, for the button's label."""
-    day = entries.today()
-    lo = entries.as_date(first or day.replace(day=1)).isoformat()
-    hi = entries.as_date(last or day).isoformat()
-    row = connection.execute(
-        "SELECT COUNT(*) AS entries, COALESCE(SUM(amount), 0) AS cents "
-        "FROM entries WHERE spent_on BETWEEN ? AND ?", (lo, hi)).fetchone()
-    return {"first": lo, "last": hi, "entries": row["entries"],
+    lo, hi = entries.month_so_far(first, last)
+    row = _stored(connection, first, last)
+    return {"first": lo.isoformat(), "last": hi.isoformat(),
+            "entries": row["entries"],
             "cents": row["cents"],
             "text": money.format(row["cents"], money.DEFAULT_CURRENCY),
             "filename": filename(first, last)}
 
 
-def month_of(value=None):
-    """(first, last) of the month a date falls in, for the default range."""
-    day = entries.as_date(value) if value else entries.today()
-    first = day.replace(day=1)
-    if first.month == 12:
-        nxt = first.replace(year=first.year + 1, month=1)
-    else:
-        nxt = first.replace(month=first.month + 1)
-    return first, nxt - dt.timedelta(days=1)
+def _stored(connection, first=None, last=None):
+    """How many entries the range holds, and their cents -- from the table,
+    not the file, so there is something independent to compare the file to."""
+    lo, hi = entries.month_so_far(first, last)
+    return connection.execute(
+        "SELECT COUNT(*) AS entries, COALESCE(SUM(amount), 0) AS cents "
+        "FROM entries WHERE spent_on BETWEEN ? AND ?",
+        (lo.isoformat(), hi.isoformat())).fetchone()

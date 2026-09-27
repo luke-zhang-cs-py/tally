@@ -48,7 +48,9 @@ and one of them had been hiding a real failure mode behind a blank string.
 
 ## Tests
 
-`pytest -q` — 134, and coverage is 100%. Both are expected to stay there.
+`pytest -q` — coverage is 100%, and is expected to stay there. The test count
+is not typed here; the README and `docs/index.html` carry it, and
+`tests/test_published_figures.py` keeps both true.
 
 Two things matter more than the number.
 

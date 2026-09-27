@@ -384,3 +384,81 @@ def test_the_empty_case_is_zero_not_null(conn):
         if isinstance(rows, list):
             assert rows == []
     assert [row["cents"] for row in entries.days(conn, limit=3)] == [0, 0, 0]
+
+
+# ------------------------------------------------------- the habit window
+
+def test_the_window_is_ninety_days_counting_today(conn):
+    """"Three times in 90 days" -- today and the 89 before it. `on - 90`
+    was 91 days, one more than the constant says; `days` already counted
+    the same way this does."""
+    on = dt.date(2026, 9, 8)
+    inside = (on - dt.timedelta(days=entries.USUAL_WINDOW_DAYS - 1))
+    outside = (on - dt.timedelta(days=entries.USUAL_WINDOW_DAYS))
+    for n in range(3):
+        spend(conn, "3.50", "Coffee", day=inside.isoformat(),
+              client_id=f"in{n}")
+        spend(conn, "9.00", "Lunch", day=outside.isoformat(),
+              client_id=f"out{n}")
+    assert [s["category"] for s in entries.usual(conn, on=on)] == ["Coffee"]
+
+
+# --------------------------------------------------- what a caller sends
+
+@pytest.mark.parametrize("field", ["category", "note", "client_id"])
+@pytest.mark.parametrize("value", [5, 1.5, True, ["Coffee"], {"a": 1}])
+def test_a_field_that_is_not_text_is_refused_with_a_reason(conn, field,
+                                                           value):
+    """`(value or "").strip()` on a number is an AttributeError: a 500 on
+    the single save, and on the queue a 500 that took the whole batch."""
+    sent = {"category": "Coffee", "note": "", "client_id": "t1"}
+    sent[field] = value
+    with pytest.raises(entries.EntryError):
+        entries.add(conn, "3.50", sent["category"], note=sent["note"],
+                    spent_on="2026-09-08", client_id=sent["client_id"])
+    assert entries.recent(conn) == []
+
+
+# ------------------------------------------------------------ the race
+
+class _MissesTheFirstLookup:
+    """A connection whose optimistic duplicate check sees nothing, which is
+    what the second of two simultaneous requests sees."""
+
+    def __init__(self, real):
+        self.real = real
+        self.looked = False
+
+    def execute(self, sql, args=()):
+        if sql.startswith("SELECT id FROM entries") and not self.looked:
+            self.looked = True
+            return self.real.execute("SELECT 1 WHERE 0")
+        return self.real.execute(sql, args)
+
+    def __getattr__(self, name):
+        return getattr(self.real, name)
+
+
+def test_losing_the_insert_race_is_a_duplicate_not_a_500(conn):
+    first, how = spend(conn, "3.50", "Coffee", client_id="same")
+    again, how_again = spend(_MissesTheFirstLookup(conn), "3.50", "Coffee",
+                             client_id="same")
+    assert (how, how_again) == ("added", "duplicate")
+    assert again == first
+    assert len(entries.recent(conn)) == 1
+
+
+def test_an_integrity_error_that_is_not_the_race_still_raises(conn):
+    """Only the client-id collision is settled as a duplicate. Anything else
+    the constraints refuse is a real error and must not be reported as
+    'already recorded'."""
+    import sqlite3
+
+    class _RefusesEveryInsert(_MissesTheFirstLookup):
+        def execute(self, sql, args=()):
+            if sql.startswith("INSERT"):
+                raise sqlite3.IntegrityError("refused")
+            return self.real.execute(sql, args)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        spend(_RefusesEveryInsert(conn), "3.50", "Coffee", client_id="new")

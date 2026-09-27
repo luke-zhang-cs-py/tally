@@ -143,3 +143,59 @@ project root named `test_*.py` is not imported and run — that happened in the
 face project, where pytest imported a research script. `.gitignore` excludes
 `data/`, `*.db` and `*.csv` before any of them exist. CI runs `pytest -q -rs`
 so the two cross-repo skips are stated rather than silent.
+
+## Second pass — 27 September 2026
+
+The same checklist again, a fortnight on. Six bugs, all found by sending the
+routes something other than what the keypad sends.
+
+**Bugs (each with a test that failed first).**
+
+- `money.parse` returned a whole-number amount before any check: `0` and `-5`
+  became 0 and -500 cents, SQLite's `CHECK (amount > 0)` raised
+  `IntegrityError`, and the route answered 500 — on the queue, a 500 that
+  `app.js` reads as "batch refused" and quarantines. The browser build has no
+  CHECK and would have stored the negative. Ints now go through the same
+  bounds as text.
+- No upper bound: past 2**63 cents SQLite raised `OverflowError`, another 500.
+  `money.MAX_CENTS` is the keypad's own cap, and a test ties the two together.
+- `"1e3"` parsed as 13.00, and a JSON `1e20` as 120.00: the strip joined the
+  digits either side of the letter. A letter between digits is refused.
+- A non-text category, note or client id was an `AttributeError` on `.strip()`
+  (500, and the whole queued batch with it); `known()` did the same for a
+  non-text currency. Both builds now refuse the first three with a reason and
+  fall back on the fourth. A JSON body that is not an object was also a 500.
+- **CSRF.** `/api/entry` fell back to `request.form`, and a cross-site form post
+  needs no preflight — so any page open in the same browser could add entries
+  to a Tally on 127.0.0.1. JSON only now. The other state-changing routes were
+  already JSON-only or `DELETE`, both of which force a preflight.
+- **CSV injection.** A Description starting `=`, `+`, `-`, `@`, tab or CR is
+  prefixed with `'` in both builds.
+- The habit window was 91 days (`on - 90`); it is 90 counting today, matching
+  `days`. The browser build's CSV writer also failed to quote a bare `\r`,
+  which Python's does; both are now pinned by the build's fixture.
+- The delete handler in `app.js` called `fetch` directly and said "Deleted."
+  for a 404 or a 500. It goes through `api()` now, and a structural test fails
+  if a second `fetch(` appears.
+
+**Integration.** The wallet-column contract test had been skipping locally,
+because the wallet app moved `layout.py` into `ingest/`. It looks in both
+places, and a new test fails if the wallet checkout is present but its lists
+are not found — a skip should mean "not checked out", nothing else.
+
+**Dispensables.** `export.month_of` had no caller outside its own tests;
+removed with them. `app.config["TALLY_DIR"]` was written and never read.
+
+**Duplicate code.** The "1st of the month to today" default was written out
+five times across `entries.py` and `export.py`; it is `entries.month_so_far`
+now, and `export._stored` replaces two copies of the same SUM query.
+
+**Coverage.** 96% of 326 before (the uncovered lines were three 400 branches
+in `app.py` and the insert-race path in `entries.py`); 100% after. The README
+badge said 100% while the sentence under it said 96% — both say 100% now,
+because both are now true.
+
+**Not changed.** Every error the parser can raise still names the input with
+`repr`, which the browser build approximates; that gap is already documented
+in `money.js`. There is still no login: that is the design, and the startup
+warning stands.

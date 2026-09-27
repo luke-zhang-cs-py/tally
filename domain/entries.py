@@ -87,9 +87,10 @@ def add(connection, amount, category, note="", currency=None, spent_on=None,
     already recorded rather than a failure the page has to interpret.
     """
     cents = money.parse(amount)
-    category = (category or "").strip()
+    category = _text(category, "a category")
     if not category:
         raise EntryError("an expense needs a category")
+    note = _text(note, "a note")
 
     on = as_date(spent_on)
     if on > today():
@@ -97,7 +98,7 @@ def add(connection, amount, category, note="", currency=None, spent_on=None,
         # having today's total include something that has not been spent.
         raise EntryError("that date is in the future")
 
-    mark = (client_id or "").strip() or new_client_id()
+    mark = _text(client_id, "a client id") or new_client_id()
     existing = connection.execute(
         "SELECT id FROM entries WHERE client_id = ?", (mark,)).fetchone()
     if existing:
@@ -107,8 +108,7 @@ def add(connection, amount, category, note="", currency=None, spent_on=None,
         cursor = connection.execute(
             "INSERT INTO entries (spent_on, amount, currency, category, note, "
             "created_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (on.isoformat(), cents, money.known(currency), category,
-             (note or "").strip(),
+            (on.isoformat(), cents, money.known(currency), category, note,
              dt.datetime.now().isoformat(timespec="seconds"), mark))
     except sqlite3.IntegrityError:
         # The SELECT above is only an optimistic check -- two requests for
@@ -125,6 +125,32 @@ def add(connection, amount, category, note="", currency=None, spent_on=None,
         raise
     connection.commit()
     return cursor.lastrowid, "added"
+
+
+def _text(value, what):
+    """A typed field, trimmed; "" for nothing; refused if it is not text.
+
+    Refused rather than coerced. `(value or "").strip()` on a number was an
+    AttributeError -- a 500 on the single save, and on the queue a 500 that
+    took every other entry in the batch with it -- and str() would guess:
+    `str(True)` is "True" in Python and "true" in the browser build.
+    """
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise EntryError(f"{what} has to be text")
+    return value.strip()
+
+
+def month_so_far(first=None, last=None):
+    """(first, last) as dates, defaulting to the 1st of this month and today.
+
+    The range the breakdown and the export share. One function, because it
+    was written out five times, and five copies of a default are five places
+    for "this month" to start meaning different things.
+    """
+    day = today()
+    return (as_date(first or day.replace(day=1)), as_date(last or day))
 
 
 def remove(connection, entry_id):
@@ -174,7 +200,9 @@ def usual(connection, limit=USUAL_LIMIT, window=USUAL_WINDOW_DAYS,
     2.50 and sometimes 18: tapping it would still leave an amount to type,
     which is the work this is meant to remove.
     """
-    since = (as_date(on) - dt.timedelta(days=window)).isoformat()
+    # `window` days counting today, the way `days` counts its bars. `on -
+    # window` was one day more than the constant says.
+    since = (as_date(on) - dt.timedelta(days=int(window) - 1)).isoformat()
     rows = connection.execute(
         "SELECT category, amount, currency, note, COUNT(*) AS times, "
         "       MAX(spent_on) AS last_on "
@@ -243,13 +271,12 @@ def _by_currency(connection, first, last):
 
 def by_category(connection, first=None, last=None):
     """[{category, currency, cents, text}] for the breakdown."""
-    day = today()
-    first = as_date(first or day.replace(day=1)).isoformat()
-    last = as_date(last or day).isoformat()
+    lo, hi = month_so_far(first, last)
     rows = connection.execute(
         "SELECT category, currency, SUM(amount) AS cents, COUNT(*) AS entries "
         "FROM entries WHERE spent_on BETWEEN ? AND ? "
-        "GROUP BY category, currency ORDER BY cents DESC", (first, last))
+        "GROUP BY category, currency ORDER BY cents DESC",
+        (lo.isoformat(), hi.isoformat()))
     return [{"category": row["category"], "currency": row["currency"],
              "cents": row["cents"], "entries": row["entries"],
              "text": money.format(row["cents"], row["currency"])}

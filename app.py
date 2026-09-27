@@ -53,7 +53,6 @@ class Context:
 
 def create_app(directory=None):
     app = Flask(__name__)
-    app.config["TALLY_DIR"] = directory
     context = Context(directory)
     for register in (_pages, _reading, _writing, _exporting):
         register(app, context)
@@ -119,7 +118,7 @@ def _record(conn, sent):
     without their note, which is the kind of bug you find months later in the
     data rather than in a test.
 
-    Takes anything with .get, so it serves both a parsed JSON body and a form.
+    Takes a dict -- a JSON object, from `_sent` or one item of a queue.
     """
     return entries.add(
         conn,
@@ -149,10 +148,28 @@ def _queued_outcome(conn, item):
     return {"clientId": item.get("clientId"), "id": entry_id, "result": how}
 
 
+def _sent():
+    """The request's JSON object, or {} for anything else.
+
+    JSON only, never a form. There is no login, so the browser's same-origin
+    rules are all that stands between any page on the web and this ledger:
+    a cross-site `application/json` POST needs a preflight this app never
+    answers, and a form post does not. /api/entry used to fall back to
+    `request.form`, which nothing in app.js sends, and which let any site
+    open in the same browser add expenses to a Tally on 127.0.0.1.
+
+    {} rather than the body itself when it is not an object: `.get` on a
+    JSON list was an AttributeError, a 500. An empty dict turns into the
+    same 400 a missing field does.
+    """
+    body = request.get_json(silent=True)
+    return body if isinstance(body, dict) else {}
+
+
 def _writing(app, ctx):
     @app.route("/api/entry", methods=["POST"])
     def add_entry():
-        body = request.get_json(silent=True) or request.form
+        body = _sent()
         with ctx.connect() as conn:
             try:
                 entry_id, how = _record(conn, body)
@@ -172,8 +189,7 @@ def _writing(app, ctx):
         already recorded is a normal outcome the page has to reconcile with
         what it is still holding.
         """
-        body = request.get_json(silent=True) or {}
-        queued = body.get("entries")
+        queued = _sent().get("entries")
         if not isinstance(queued, list):
             return jsonify({"error": "'entries' must be a list"}), 400
         if len(queued) > MAX_QUEUED:

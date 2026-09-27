@@ -119,3 +119,60 @@ def test_an_unknown_currency_falls_back_rather_than_raising(given, expected):
 def test_the_scale_is_named_not_written_out():
     assert money.MINOR_UNITS == 2
     assert money._SCALE == 100
+
+
+# ------------------------------------------------------ what a caller sends
+
+@pytest.mark.parametrize("number", [0, -5, -1])
+def test_a_whole_number_is_held_to_the_same_rule_as_text(number):
+    """The int shortcut returned `number * 100` before any check, so `0`
+    and `-5` came back as 0 and -500. The table's CHECK caught them -- as a
+    raw IntegrityError, a 500 that took a whole queued batch with it."""
+    with pytest.raises(money.MoneyError):
+        money.parse(number)
+
+
+@pytest.mark.parametrize("amount", [10 ** 20, "100000000000000000000",
+                                    "1000000.00", 1000000])
+def test_more_than_the_keypad_can_type_is_refused(amount):
+    """Past 2**63 cents SQLite raised OverflowError, another 500. The cap is
+    the keypad's own, since the keypad is the only thing that types here."""
+    with pytest.raises(money.MoneyError):
+        money.parse(amount)
+
+
+def test_the_largest_amount_the_keypad_can_type_is_accepted():
+    assert money.parse("999999.99") == money.MAX_CENTS
+    assert money.parse(999999) == 99999900
+
+
+@pytest.mark.parametrize("text", ["1e3", "1E3", 1e20, 1e+21, "12abc34"])
+def test_letters_between_digits_are_not_one_number(text):
+    """The strip kept the digits and dropped the rest, so "1e3" was read as
+    13.00 and a JSON 1e20 as 120.00 -- silently a different amount."""
+    with pytest.raises(money.MoneyError):
+        money.parse(text)
+
+
+def test_a_symbol_beside_the_figure_is_still_fine():
+    assert money.parse("CA$ 12,00") == 1200
+    assert money.parse("12.00 EUR") == 1200
+
+
+def test_the_cap_is_the_keypads_cap():
+    """app.js stops the keypad at a literal; this is its server half, and
+    the two drifting apart would refuse what the keypad let you type."""
+    import re
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "static", "js", "app.js"),
+              encoding="utf-8") as handle:
+        found = re.search(r"if \(next > (\d+)\) return;", handle.read())
+    assert found, "the keypad's cap moved; update this pattern"
+    assert int(found.group(1)) == money.MAX_CENTS
+
+
+@pytest.mark.parametrize("given", [5, 1.5, True, ["EUR"]])
+def test_a_currency_that_is_not_text_falls_back(given):
+    """It raised AttributeError on `.strip()`, a 500, where the rule for an
+    unknown currency is to fall back."""
+    assert money.known(given) == money.DEFAULT_CURRENCY

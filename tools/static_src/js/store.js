@@ -51,6 +51,7 @@ var TallyStore = (function () {
 
   /* export.py — exactly the names the wallet app's importer looks for. */
   var COLUMNS = ['Date', 'Description', 'Amount', 'Currency'];
+  var FORMULA_STARTS = ['=', '+', '-', '@', '\t', '\r'];
 
   function EntryError(message) {
     var error = new Error(message);
@@ -206,11 +207,19 @@ var TallyStore = (function () {
   }
 
   /* --------------------------------------------------------------- adding */
+  /* entries._text: refused rather than coerced when it is not text, because
+     String() and str() disagree about what a boolean says. */
+  function text(value, what) {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'string') throw EntryError(what + ' has to be text');
+    return value.trim();
+  }
+
   api.add = function (sent) {
     var cents = M.parse(sent.amount);
-    var category = String(sent.category === null || sent.category === undefined
-                          ? '' : sent.category).trim();
+    var category = text(sent.category, 'a category');
     if (!category) throw EntryError('an expense needs a category');
+    var note = text(sent.note, 'a note');
 
     var on = asDate(sent.date);
     if (on > api.today()) {
@@ -219,7 +228,7 @@ var TallyStore = (function () {
       throw EntryError('that date is in the future');
     }
 
-    var mark = String(sent.clientId || '').trim() || newClientId();
+    var mark = text(sent.clientId, 'a client id') || newClientId();
     var rows = load();
     for (var i = 0; i < rows.length; i++) {
       if (rows[i].client_id === mark) return { id: rows[i].id, result: 'duplicate' };
@@ -231,7 +240,7 @@ var TallyStore = (function () {
       amount: cents,
       currency: M.known(sent.currency),
       category: category,
-      note: String(sent.note === null || sent.note === undefined ? '' : sent.note).trim(),
+      note: note,
       created_at: new Date().toISOString().slice(0, 19),
       client_id: mark
     };
@@ -274,7 +283,8 @@ var TallyStore = (function () {
   api.usual = function (limit, window, on) {
     if (limit === undefined) limit = USUAL_LIMIT;
     if (window === undefined) window = USUAL_WINDOW_DAYS;
-    var since = shift(asDate(on), -window);
+    /* `window` days counting today, as entries.py counts them. */
+    var since = shift(asDate(on), -(Math.trunc(window) - 1));
 
     /* GROUP BY category, amount, currency, note — the triple that identifies
        a habit. Not the category alone: "Coffee" is not a shortcut if it is
@@ -411,21 +421,25 @@ var TallyStore = (function () {
 
   /* ------------------------------------------------------------- the CSV */
   function description(category, note) {
-    var text = String(note || '').trim();
+    var trimmed = String(note || '').trim();
     /* A plain hyphen, not an em-dash: Excel on Windows re-saves in the local
        codepage and mangles anything outside ASCII. */
-    return text ? category + ' - ' + text : category;
+    var out = trimmed ? category + ' - ' + trimmed : category;
+    /* export.FORMULA_STARTS: a Description a spreadsheet would run as a
+       formula gets the apostrophe that tells it the cell is text. */
+    return FORMULA_STARTS.indexOf(out.charAt(0)) >= 0 ? "'" + out : out;
   }
 
   function csvField(value) {
     /* QUOTE_MINIMAL, the way Python's csv module does it: quote only when the
        field holds the delimiter, a quote, or the line terminator, and double
        any quote inside. */
-    var text = String(value);
-    if (text.indexOf(',') < 0 && text.indexOf('"') < 0 && text.indexOf('\n') < 0) {
-      return text;
-    }
-    return '"' + text.replace(/"/g, '""') + '"';
+    var field = String(value);
+    /* \r as well as \n: Python's writer quotes on either, whatever the line
+       terminator, and an unquoted \r splits the row for any reader that
+       treats it as a line end. */
+    if (!/[,"\n\r]/.test(field)) return field;
+    return '"' + field.replace(/"/g, '""') + '"';
   }
 
   function readCsv(text) {

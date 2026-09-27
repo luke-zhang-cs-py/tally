@@ -423,9 +423,11 @@ el('usual').addEventListener('click', function (event) {
 el('entries').addEventListener('click', function (event) {
   var id = event.target.dataset && event.target.dataset.remove;
   if (!id) return;
-  fetch('/api/entry/' + id, { method: 'DELETE' })
+  /* Through api(), so a 404 (another tab got there first) or a 500 is
+   * reported as what it is rather than as "Deleted.". */
+  api('/api/entry/' + id, { method: 'DELETE' })
     .then(function () { say('Deleted.', ''); return load(); })
-    .catch(function (bad) { say(bad.message, 'bad'); });
+    .catch(function (bad) { say(bad.message, 'bad'); return load(); });
 });
 
 /* Anything stranded from a previous session goes as soon as we are back. */

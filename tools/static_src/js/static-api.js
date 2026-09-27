@@ -77,7 +77,12 @@
 
   function body(init) {
     if (!init || init.body == null) return {};
-    try { return JSON.parse(init.body); } catch (e) { return {}; }
+    /* app.py's _sent: an object, or {} -- a JSON null here used to reach
+       record() and throw a TypeError the page could not explain. */
+    var parsed;
+    try { parsed = JSON.parse(init.body); } catch (e) { return {}; }
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed : {};
   }
 
   /* app.py reads the limit with `int(raw)`, and Number() is not that. Number

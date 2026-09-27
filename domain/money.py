@@ -31,7 +31,19 @@ SYMBOLS = {"EUR": "€", "CAD": "CA$", "USD": "US$"}
 MINOR_UNITS = 2
 _SCALE = 10 ** MINOR_UNITS
 
+# The keypad's own ceiling -- app.js stops accepting digits here -- and the
+# server's, so an amount it could not have typed is refused rather than
+# stored. Without one, anything past 2**63 cents reached SQLite and came back
+# as an OverflowError: a 500, not a reason.
+MAX_CENTS = 99_999_999
+
 _ALLOWED = re.compile(r"[^\d.,]")
+
+# A letter between two digits: "1e3", str(1e20) == "1e+20", "12abc34". The
+# strip below keeps the digits either side and joins them, so "1e3" was read
+# as 13.00 -- a different amount, silently. A symbol *beside* the figure
+# ("CA$ 12,00", "12.00 EUR") has no digit on both sides and is still fine.
+_LETTER_INSIDE = re.compile(r"\d[A-Za-z]+\+?\d")
 
 
 class MoneyError(ValueError):
@@ -56,7 +68,10 @@ def parse(text):
     if text is None:
         raise MoneyError("no amount given")
     if isinstance(text, int) and not isinstance(text, bool):
-        return text * _SCALE
+        # Through the same bounds as text, not straight back out: `0` and
+        # `-5` used to return 0 and -500 here, and the table's CHECK caught
+        # them as an IntegrityError -- a 500 that took a queued batch with it.
+        return _bounded(text * _SCALE)
 
     raw = str(text)
     # A sign has to be caught before the strip, because the strip removes it:
@@ -65,6 +80,9 @@ def parse(text):
     # accepting or rejecting it, and this app records only what was spent.
     if "-" in raw:
         raise MoneyError("an expense is a positive amount")
+
+    if _LETTER_INSIDE.search(raw):
+        raise MoneyError(f"cannot read {text!r}")
 
     cleaned = _ALLOWED.sub("", raw).replace(",", ".")
     if not any(character.isdigit() for character in cleaned):
@@ -76,9 +94,16 @@ def parse(text):
     if len(fraction) > MINOR_UNITS:
         raise MoneyError(f"{text!r} has more than {MINOR_UNITS} decimal places")
 
-    cents = int(whole or 0) * _SCALE + int((fraction + "00")[:MINOR_UNITS])
+    return _bounded(int(whole or 0) * _SCALE
+                    + int((fraction + "00")[:MINOR_UNITS]))
+
+
+def _bounded(cents):
+    """Cents, if they are an amount somebody could have spent."""
     if cents <= 0:
         raise MoneyError("an amount has to be more than nothing")
+    if cents > MAX_CENTS:
+        raise MoneyError(f"more than {plain(MAX_CENTS)} is not one expense")
     return cents
 
 
@@ -122,5 +147,7 @@ def known(currency):
     version no longer offers should still record the expense, because losing
     the entry is worse than filing it in euros and letting it be corrected.
     """
-    code = (currency or "").strip().upper()
+    # Text only. A number or a list here was an AttributeError on .strip(),
+    # which is a 500 where the rule above says fall back.
+    code = currency.strip().upper() if isinstance(currency, str) else ""
     return code if code in CURRENCIES else DEFAULT_CURRENCY
