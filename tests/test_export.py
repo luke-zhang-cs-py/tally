@@ -249,6 +249,16 @@ def test_the_summary_of_nothing_is_zero_not_an_error(conn):
     out = export.summary(conn, "2026-09-01", "2026-09-30")
     assert out["entries"] == 0
     assert out["cents"] == 0
+    assert out["text"] == "€0.00"
+
+
+def test_the_summary_never_sums_currencies_into_euros(conn):
+    """The export note printed every currency's cents as one euro figure:
+    3.50 EUR and 10.00 CAD read as "€13.50"."""
+    spend(conn, "3.50", "Coffee", client_id="a")
+    spend(conn, "10.00", "Taxi", currency="CAD", client_id="b")
+    out = export.summary(conn, "2026-09-01", "2026-09-30")
+    assert out["text"] == "CA$10.00 + €3.50"
 
 
 def test_a_checked_out_wallet_app_is_never_mistaken_for_a_missing_one():

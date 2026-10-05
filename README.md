@@ -128,7 +128,7 @@ are all gitignored. Point it elsewhere with `TALLY_DATA=/path/to/folder`.
 pytest -q
 ```
 
-210 tests, 100% of 330 statements — both figures checked against the repo, because
+213 tests, 100% of 339 statements — both figures checked against the repo, because
 a number typed into a file goes stale the moment a test is added.
 
 The suite isn't there for the number. Everything it asserts is something that

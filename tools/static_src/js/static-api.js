@@ -205,7 +205,7 @@
     ['GET', /^\/api\/reconciles$/, function () {
       var done = S.reconciles();
       return reply(200, { agrees: done.agrees, file: done.file,
-                          stored: done.stored, text: M.format(done.stored) });
+                          stored: done.stored, text: S.rangeText() });
     }],
 
     ['GET', /^\/export\.csv$/, function (url) {

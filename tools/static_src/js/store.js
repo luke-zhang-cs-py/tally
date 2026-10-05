@@ -358,6 +358,18 @@ var TallyStore = (function () {
     });
   }
 
+  /* One line per range, per currency: "€12.00 + CA$5.00". Summing the
+     currencies and printing the sum in euros was a made-up number. */
+  function inEachCurrency(perCurrency) {
+    if (!perCurrency.length) return M.format(0, M.DEFAULT_CURRENCY);
+    return perCurrency.map(function (row) { return row.text; }).join(' + ');
+  }
+
+  api.rangeText = function (first, last) {
+    var range = exportRange(first, last);
+    return inEachCurrency(byCurrency(range[0], range[1]));
+  };
+
   api.totals = function (on) {
     /* Per currency, never summed across them: adding euros to dollars needs
        a rate this app does not have. */
@@ -403,18 +415,15 @@ var TallyStore = (function () {
     if (limit === undefined) limit = 14;
     var end = asDate(on);
     var start = shift(end, -(Math.trunc(limit) - 1));
-    var found = {};
-    load().forEach(function (row) {
-      if (!inRange(row, start, end)) return;
-      found[row.spent_on] = (found[row.spent_on] || 0) + row.amount;
-    });
     var out = [];
     for (var offset = 0; offset < Math.trunc(limit); offset++) {
       var day = shift(start, offset);
-      var cents = found[day] || 0;
+      var spent = byCurrency(day, day);
+      var cents = M.total(spent.map(function (row) { return row.cents; }));
       /* Zero rather than omitted: a gap in a bar chart reads as missing
-         data, and a day you spent nothing is a fact worth seeing. */
-      out.push({ date: day, cents: cents, text: M.format(cents, M.DEFAULT_CURRENCY) });
+         data, and a day you spent nothing is a fact worth seeing. The text
+         is per currency; cents only sets the bar's length. */
+      out.push({ date: day, cents: cents, text: inEachCurrency(spent) });
     }
     return out;
   };
@@ -528,7 +537,7 @@ var TallyStore = (function () {
       cents += row.amount;
     });
     return { first: range[0], last: range[1], entries: count, cents: cents,
-             text: M.format(cents, M.DEFAULT_CURRENCY),
+             text: inEachCurrency(byCurrency(range[0], range[1])),
              filename: api.filename(first, last) };
   };
 

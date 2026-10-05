@@ -107,7 +107,10 @@ def summary(connection, first=None, last=None):
     return {"first": lo.isoformat(), "last": hi.isoformat(),
             "entries": row["entries"],
             "cents": row["cents"],
-            "text": money.format(row["cents"], money.DEFAULT_CURRENCY),
+            # Per currency: a month with euros and dollars in it is not
+            # one euro figure.
+            "text": entries.range_text(connection, lo.isoformat(),
+                                       hi.isoformat()),
             "filename": filename(first, last)}
 
 

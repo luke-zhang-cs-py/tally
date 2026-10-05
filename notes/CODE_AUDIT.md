@@ -5,6 +5,98 @@ review the other five projects in this family had; this one was written with it
 in hand, so the list is shorter and the findings are mostly things caught
 before they shipped rather than after.
 
+## Third pass — 5 October 2026
+
+Baseline: **208 passed, 1 failed, 1 skipped.** After: **212 passed, 1
+skipped** (213 collected), flake8 clean at `--max-complexity=10`, and
+`tools/build_static.py` agrees with the Python on all three passes (1158
+money values, 39 payloads, 56 requests).
+
+### Bugs fixed
+
+1. **A test that started failing on 1 October.**
+   `test_the_breakdown_groups_by_category` spent on 2026-09-08 and called
+   `by_category` with no range, so "this month" came from the real calendar.
+   It passes the helper's September now. That was the baseline failure; it
+   was a broken test, not broken code.
+   Covered by: the test itself.
+2. **Mixed currencies printed as one euro figure, in three places.** The
+   module docstring says a total is never summed across currencies, and
+   `totals` follows that, but three other figures did not: the export note
+   (`export.summary` text), the reconcile footer (`/api/reconciles` text)
+   and each day's bar label (`entries.days` text) all summed every
+   currency's cents and printed the result in euros. 3.50 EUR + 10.00 USD
+   showed as "€13.50". They now read "US$10.00 + €3.50", through one helper,
+   `entries.in_each_currency` / `range_text`, and the same change in the
+   browser build's `store.js` and `static-api.js`. A day's `cents` is still
+   the sum, because it only sets the bar's length.
+   Covered by: `test_a_day_in_two_currencies_is_labelled_in_both`,
+   `test_the_summary_never_sums_currencies_into_euros`,
+   `test_the_reconcile_footer_names_each_currency`. All three were run
+   against the old code and failed, and the build's parity pass checks the
+   port on its mixed-currency fixture.
+
+`_by_currency` also sorts ties by currency code now, as the JS port already
+did. Before, a tie came back in whatever order SQLite chose.
+
+### The checklist
+
+- **Dispensables:** nothing new. No dead code, stale comments or unused
+  imports found.
+- **Bloaters:** none. No function goes over complexity 10.
+- **Abusers:** none. No switch statements, temporary fields or tangled
+  conditionals.
+- **Couplers:** `export` and `app` call `entries.range_text` rather than
+  reaching into `entries._by_currency`. Nothing else found.
+- **Change preventers:** what bug 2 really was. The "per currency, never
+  summed" rule was written once in `totals` and ignored by three other
+  callers. It now lives in one helper.
+- **Global data / magic numbers / naming:** nothing new.
+- **Bug classes:** logic (bug 2), a test that depended on the date (bug 1).
+  Security: every `innerHTML` in `app.js` still goes through `esc()`, the
+  JSON-only writes and the CSV formula guard are still in place, and no
+  secrets, personal data or local paths are in the tree.
+  Out of bounds: `/api/entries?limit=-1` reaches SQLite as `LIMIT -1`, which
+  means no limit. That is harmless on a single-user ledger, so it is left
+  (see below).
+
+### Coverage
+
+| Module | Statements | Lines | Branches |
+|---|---|---|---|
+| `app.py` | 107 | 100% | 10/10 |
+| `core/db.py` | 26 | 100% | 0/0 |
+| `core/paths.py` | 8 | 100% | 2/2 |
+| `domain/entries.py` | 113 | 100% | 29/30 |
+| `domain/export.py` | 37 | 100% | 4/4 |
+| `domain/money.py` | 48 | 100% | 18/18 |
+| **Total** | **339** | **100%** | **63/64 (99%)** |
+
+The one partial branch is `categories()` when every default category is
+already in use. The browser build is exercised by `build_static.py`'s
+headless-Chrome parity run, not by pytest.
+
+### Maintenance
+
+- **Corrective:** both bugs above.
+- **Adaptive:** nothing needed. The Flask and pytest pins are current, and
+  the Actions versions are `checkout@v5` and `setup-python@v6`.
+- **Perfective:** a trip month's export note and bars now show what was
+  actually spent, in each currency.
+- **Preventive:** the three mixed-currency tests. The figures on the
+  published page and in the README were re-measured with
+  `tools/refresh_figures.py`.
+
+### Left for later
+
+- Clamp `limit` on `/api/entries` (negative means unlimited). This needs
+  the same change in `static-api.js` so the parity pass stays green.
+- A day's bar *length* still adds currencies together. The figure beside it
+  is honest now; a per-currency bar would be a design change.
+- Other tests that rely on "today" should pin a date, as bug 1 now does.
+
+## First pass
+
 Measured 9 September 2026: **134 tests, 100% of 304 statements**, flake8 clean
 including `--max-complexity=10`.
 

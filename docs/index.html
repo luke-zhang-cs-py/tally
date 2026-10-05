@@ -360,10 +360,10 @@ footer a { color: inherit; }
  * and `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'app.py',             lines: 245, stmts: 106, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
-  { name: 'domain/entries.py',  lines: 306, stmts: 105, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'domain/entries.py',  lines: 334, stmts: 113, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'app.py',             lines: 247, stmts: 107, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
   { name: 'domain/money.py',    lines: 153, stmts:  48, missed:  0, does: 'integer cents; one parser and one formatter' },
-  { name: 'domain/export.py',   lines: 121, stmts:  37, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
+  { name: 'domain/export.py',   lines: 124, stmts:  37, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
   { name: 'core/db.py',         lines:  96, stmts:  26, missed:  0, does: 'the one table, and a connection that really closes' },
   { name: 'core/paths.py',      lines:  32, stmts:   8, missed:  0, does: 'where the data lives — one decision, one place' },
   { name: 'core/__init__.py',   lines:   6, stmts:   0, missed:  0, does: 'the package: which directory, and which row' },
@@ -372,14 +372,14 @@ var MODULES = [
 
 var TESTS = [
   { file: 'test_money.py',             n: 61, of: 'both decimal conventions, and never a silent zero' },
-  { file: 'test_entries.py',           n: 55, of: 'the queries, the habits, and the month boundary' },
-  { file: 'test_app.py',               n: 53, of: 'the routes, the queue, and the rejected-entry rule' },
-  { file: 'test_export.py',            n: 25, of: 'the file, the reconcile, and the wallet’s column names' },
+  { file: 'test_entries.py',           n: 56, of: 'the queries, the habits, and the month boundary' },
+  { file: 'test_app.py',               n: 54, of: 'the routes, the queue, and the rejected-entry rule' },
+  { file: 'test_export.py',            n: 26, of: 'the file, the reconcile, and the wallet’s column names' },
   { file: 'test_published_figures.py', n: 11, of: 'the numbers on this page, against a fresh measurement' },
   { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 1860;
+var TEST_LINES = 1891;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so

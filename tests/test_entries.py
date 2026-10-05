@@ -258,7 +258,9 @@ def test_the_breakdown_groups_by_category(conn):
     spend(conn, "3.50", "Coffee", client_id="a")
     spend(conn, "3.50", "Coffee", client_id="b")
     spend(conn, "12.40", "Lunch", client_id="c")
-    rows = entries.by_category(conn)
+    # The helper's September, not "this month": with no range this read
+    # the real calendar, and failed from the first of October.
+    rows = entries.by_category(conn, "2026-09-01", "2026-09-30")
     assert rows[0]["category"] == "Lunch"          # largest first
     assert rows[1]["category"] == "Coffee"
     assert rows[1]["cents"] == 700
@@ -279,6 +281,17 @@ def test_the_chart_covers_every_day_including_empty_ones(conn):
     assert days[-1]["cents"] == 350
     assert days[0]["cents"] == 0
     assert days[0]["text"] == "€0.00"
+
+
+def test_a_day_in_two_currencies_is_labelled_in_both(conn):
+    """The bar's figure used to be the day's cents summed and printed in
+    euros: 3.50 EUR and 10.00 USD read as "€13.50"."""
+    spend(conn, "3.50", "Coffee", day="2026-09-08", client_id="a")
+    spend(conn, "10.00", "Lunch", day="2026-09-08", currency="USD",
+          client_id="b")
+    day = entries.days(conn, limit=1, on="2026-09-08")[0]
+    assert day["text"] == "US$10.00 + €3.50"
+    assert day["cents"] == 1350, "the bar's length still covers both"
 
 
 def test_the_chart_runs_oldest_to_newest(conn):

@@ -252,6 +252,14 @@ def test_the_file_is_reported_to_add_up(client):
     assert body["text"] == "€3.50", "the footer prints this"
 
 
+def test_the_reconcile_footer_names_each_currency(client):
+    post(client, "/api/entry", amount="3.50", category="Coffee", clientId="a")
+    post(client, "/api/entry", amount="10.00", category="Taxi",
+         currency="USD", clientId="b")
+    body = client.get("/api/reconciles").get_json()
+    assert body["text"] == "US$10.00 + €3.50"
+
+
 # ------------------------------------------------------------ the markup
 
 def test_every_id_in_the_page_is_used_by_the_script():

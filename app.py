@@ -229,9 +229,11 @@ def _exporting(app, ctx):
         """Does the exported file add up to what is stored."""
         with ctx.connect() as conn:
             agrees, from_file, stored = export.reconciles(conn)
+            first, last = entries.month_so_far()
             return jsonify({"agrees": agrees, "file": from_file,
                             "stored": stored,
-                            "text": money.format(stored)})
+                            "text": entries.range_text(
+                                conn, first.isoformat(), last.isoformat())})
 
 
 app = create_app()

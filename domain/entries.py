@@ -262,11 +262,30 @@ def _by_currency(connection, first, last):
     rows = connection.execute(
         "SELECT currency, SUM(amount) AS cents, COUNT(*) AS entries "
         "FROM entries WHERE spent_on BETWEEN ? AND ? "
-        "GROUP BY currency ORDER BY cents DESC", (first, last)).fetchall()
+        "GROUP BY currency ORDER BY cents DESC, currency",
+        (first, last)).fetchall()
     return [{"currency": row["currency"], "cents": row["cents"],
              "entries": row["entries"],
              "text": money.format(row["cents"], row["currency"])}
             for row in rows]
+
+
+def in_each_currency(per_currency):
+    """One line of text for [{text}] per currency: "€12.00 + CA$5.00".
+
+    For the places that show a single figure for a range -- the export note,
+    the reconcile footer, a day's bar. They used to sum every currency's
+    cents and format the sum in euros, which is the made-up number the
+    module docstring says this app never prints.
+    """
+    if not per_currency:
+        return money.format(0, money.DEFAULT_CURRENCY)
+    return " + ".join(row["text"] for row in per_currency)
+
+
+def range_text(connection, first, last):
+    """What a range holds, per currency, as one line. Dates as ISO text."""
+    return in_each_currency(_by_currency(connection, first, last))
 
 
 def by_category(connection, first=None, last=None):
@@ -289,18 +308,27 @@ def days(connection, limit=14, on=None):
     Days with nothing spent are included as zero rather than omitted: a gap
     in a bar chart reads as missing data, and a day you spent nothing is a
     fact worth seeing.
+
+    `text` is per currency, like the totals. `cents` is still the day's
+    cents across currencies, because it only sets the bar's length.
     """
     end = as_date(on)
     start = end - dt.timedelta(days=int(limit) - 1)
-    found = {row["spent_on"]: row["cents"] for row in connection.execute(
-        "SELECT spent_on, SUM(amount) AS cents FROM entries "
-        "WHERE spent_on BETWEEN ? AND ? GROUP BY spent_on",
-        (start.isoformat(), end.isoformat()))}
+    found = {}
+    for row in connection.execute(
+            "SELECT spent_on, currency, SUM(amount) AS cents FROM entries "
+            "WHERE spent_on BETWEEN ? AND ? GROUP BY spent_on, currency "
+            "ORDER BY cents DESC, currency",
+            (start.isoformat(), end.isoformat())):
+        found.setdefault(row["spent_on"], []).append({
+            "cents": row["cents"],
+            "text": money.format(row["cents"], row["currency"])})
 
     out = []
     for offset in range(int(limit)):
         day = (start + dt.timedelta(days=offset)).isoformat()
-        cents = found.get(day, 0)
-        out.append({"date": day, "cents": cents,
-                    "text": money.format(cents, money.DEFAULT_CURRENCY)})
+        spent = found.get(day, [])
+        out.append({"date": day,
+                    "cents": money.total(row["cents"] for row in spent),
+                    "text": in_each_currency(spent)})
     return out
