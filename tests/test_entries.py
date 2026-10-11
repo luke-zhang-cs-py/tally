@@ -217,6 +217,17 @@ def test_the_ones_you_use_come_first(conn):
     assert entries.categories(conn)[0] == "Barber"
 
 
+def test_a_default_already_in_use_is_listed_once(conn):
+    """Used defaults keep their most-used position and are not appended a
+    second time at the end."""
+    name = db.DEFAULT_CATEGORIES[0]
+    spend(conn, "3.50", name)
+    listed = entries.categories(conn)
+    assert listed.count(name) == 1
+    assert listed[0] == name
+    assert len(listed) == len(db.DEFAULT_CATEGORIES)
+
+
 def test_a_new_category_joins_the_list(conn):
     spend(conn, "3.50", "Parking")
     assert "Parking" in entries.categories(conn)

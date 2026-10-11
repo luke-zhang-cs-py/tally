@@ -46,12 +46,12 @@ def test_the_columns_are_the_ones_the_other_app_recognises(conn):
     assert text.splitlines()[0] == "Date,Description,Amount,Currency"
 
 
-# Where the wallet app keeps its header lists: ingest/ since it grouped its
-# root modules into packages, the root before that. Both, because a checkout
+# Where the wallet app keeps its header lists: importers.py now (the *_NAMES
+# tuples), ingest/layout.py and the root layout.py before that. All, because a checkout
 # of either age is a wallet app -- and looking only at the old place made
 # the contract test skip, which reads exactly like the wallet app being
 # absent, for as long as nobody counted the skips.
-WALLET_LAYOUTS = (("ingest", "layout.py"), ("layout.py",))
+WALLET_LAYOUTS = (("importers.py",), ("ingest", "layout.py"), ("layout.py",))
 
 
 def _wallet_root():
