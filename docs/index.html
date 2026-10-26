@@ -353,33 +353,37 @@ footer a { color: inherit; }
 /* Every number on this page is read from here, so the tiles, the charts and
  * the table cannot drift apart.
  *
- * Measured on 27 September 2026 in the repository: `pytest -q --cov` for the
+ * Measured on 26 October 2026 in the repository: `pytest -q --cov` for the
  * statements and what is uncovered, `wc -l` for length, and `pytest
  * --collect-only -q` for the test counts. Not estimated.
  * tests/test_published_figures.py checks them against a fresh measurement,
  * and `python tools/refresh_figures.py` rewrites them. */
 
 var MODULES = [
-  { name: 'domain/entries.py',  lines: 334, stmts: 113, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
-  { name: 'app.py',             lines: 247, stmts: 107, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
-  { name: 'domain/money.py',    lines: 153, stmts:  48, missed:  0, does: 'integer cents; one parser and one formatter' },
-  { name: 'domain/export.py',   lines: 124, stmts:  37, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
-  { name: 'core/db.py',         lines:  96, stmts:  26, missed:  0, does: 'the one table, and a connection that really closes' },
-  { name: 'core/paths.py',      lines:  32, stmts:   8, missed:  0, does: 'where the data lives — one decision, one place' },
-  { name: 'core/__init__.py',   lines:   6, stmts:   0, missed:  0, does: 'the package: which directory, and which row' },
-  { name: 'domain/__init__.py', lines:   6, stmts:   0, missed:  0, does: 'the package: the rules, with no Flask in them' }
+  { name: 'tools/build_static.py',    lines: 1030, stmts: 301, missed:  0, does: 'the browser build, and the check that refuses a wrong port' },
+  { name: 'tools/refresh_figures.py', lines: 233, stmts: 124, missed:  0, does: 'measures this page’s figures and rewrites them' },
+  { name: 'app.py',                   lines: 257, stmts: 113, missed:  0, does: 'the HTTP surface; eight routes, loopback by default' },
+  { name: 'domain/entries.py',        lines: 334, stmts: 113, missed:  0, does: 'recording, querying, the habits, and the date coercion' },
+  { name: 'domain/money.py',          lines: 153, stmts:  48, missed:  0, does: 'integer cents; one parser and one formatter' },
+  { name: 'domain/export.py',         lines: 142, stmts:  40, missed:  0, does: 'the CSV, and whether it adds up to what is stored' },
+  { name: 'core/db.py',               lines:  96, stmts:  26, missed:  0, does: 'the one table, and a connection that really closes' },
+  { name: 'core/paths.py',            lines:  32, stmts:   8, missed:  0, does: 'where the data lives — one decision, one place' },
+  { name: 'core/__init__.py',         lines:   6, stmts:   0, missed:  0, does: 'the package: which directory, and which row' },
+  { name: 'domain/__init__.py',       lines:   6, stmts:   0, missed:  0, does: 'the package: the rules, with no Flask in them' }
 ];
 
 var TESTS = [
   { file: 'test_money.py',             n: 61, of: 'both decimal conventions, and never a silent zero' },
   { file: 'test_entries.py',           n: 57, of: 'the queries, the habits, and the month boundary' },
-  { file: 'test_app.py',               n: 54, of: 'the routes, the queue, and the rejected-entry rule' },
-  { file: 'test_export.py',            n: 26, of: 'the file, the reconcile, and the wallet’s column names' },
+  { file: 'test_app.py',               n: 56, of: 'the routes, the queue, and the rejected-entry rule' },
+  { file: 'test_build_static.py',      n: 38, of: 'that the build refuses every kind of disagreement' },
+  { file: 'test_export.py',            n: 30, of: 'the file, the reconcile, and the wallet’s column names' },
+  { file: 'test_refresh_figures.py',   n: 21, of: 'that this page’s rewriter is right and leaves no diff' },
   { file: 'test_published_figures.py', n: 11, of: 'the numbers on this page, against a fresh measurement' },
   { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 1891;
+var TEST_LINES = 3013;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
@@ -659,7 +663,7 @@ el('tableBtn').addEventListener('click', function () {
 });
 
 el('footNote').textContent =
-  'Figures measured on 27 September 2026 in the repository with pytest ' +
+  'Figures measured on 26 October 2026 in the repository with pytest ' +
   '--cov, wc -l and pytest --collect-only, and checked against a fresh ' +
   'measurement by tests/test_published_figures.py, because a page like this ' +
   'goes stale the moment a test is added. Everything here is read from one ' +

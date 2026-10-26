@@ -1,12 +1,17 @@
 [run]
+# The whole project, not only what the suite happens to import: a module no
+# test loads is reported at 0% rather than left out of the total.
+source = .
+branch = True
 omit =
     tests/*
-    # Developer scripts, not shipped code.
-    tools/*
 
 [report]
-exclude_lines =
-    pragma: no cover
-    # The script entry point starts a server and blocks, so no test can run
-    # it; it is verified by running the app.
+# tools/ has no __init__.py, and without this a source directory that is not
+# a package is never searched for files nothing imported.
+include_namespace_packages = True
+fail_under = 100
+show_missing = True
+exclude_also =
+    # The script entry points. Each one only calls main(), which is tested.
     if __name__ == .__main__.:

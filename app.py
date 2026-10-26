@@ -239,9 +239,19 @@ def _exporting(app, ctx):
 app = create_app()
 
 
-if __name__ == "__main__":
+def main():
+    """Start the server. Blocks until it is stopped.
+
+    The warning is printed before anything else, because a person who set
+    HOST to reach this from their phone is exactly the person who needs to
+    read that it now answers to the whole network.
+    """
     if HOST != "127.0.0.1":
         print("!! Bound to " + HOST + " with no login.")
         print("!! Anyone on this network can read and add expenses.")
     print(f"Tally on http://{HOST}:{PORT}  ({dt.date.today()})")
     app.run(host=HOST, port=PORT, debug=DEBUG)
+
+
+if __name__ == "__main__":
+    main()

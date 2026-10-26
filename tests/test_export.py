@@ -184,6 +184,25 @@ def test_rows_come_out_oldest_first(conn):
     assert dates == sorted(dates)
 
 
+@pytest.mark.parametrize("note", ["line\rbreak", "line\nbreak",
+                                  "line\r\nbreak", 'say "hi", twice'])
+def test_a_note_with_a_line_break_is_quoted_on_every_python(conn, note):
+    """Python 3.10 and 3.11 quote a field only for the characters of the
+    writer's own line terminator, and that is "\\n" here -- so a bare \\r
+    went out unquoted, and the file could not be read back: reconciles()
+    raised csv.Error, a 500 from /api/reconciles, and the wallet app got a
+    row split in two. 3.12 quotes \\r regardless, which is why it was only
+    ever red on the older half of CI's matrix."""
+    spend(conn, "2.22", "Other", note=note)
+    text = export.as_csv(conn, "2026-09-01", "2026-09-30")
+    quoted = note.replace('"', '""')
+    assert text == ("Date,Description,Amount,Currency\n"
+                    '2026-09-08,"Other - %s",-2.22,EUR\n' % quoted)
+    assert rows_of(text)[0]["Description"] == "Other - " + note
+    assert export.reconciles(conn, "2026-09-01", "2026-09-30") == \
+        (True, 222, 222)
+
+
 def test_an_empty_range_still_writes_a_header(conn):
     """A file with no header is not a CSV, and the far end will choke on it
     rather than report nothing to report."""

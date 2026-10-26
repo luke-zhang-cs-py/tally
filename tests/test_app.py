@@ -432,3 +432,37 @@ def test_every_request_in_the_page_checks_its_answer():
                     flags=re.S)
     assert len(re.findall(r"\bfetch\(", script)) == 1, (
         "a fetch() outside api() does not check reply.ok")
+
+
+# ------------------------------------------------------------- the launcher
+
+def _launch(monkeypatch, host):
+    """Run main() with the server's run() recorded instead of started."""
+    started = []
+    monkeypatch.setattr(web, "HOST", host)
+    monkeypatch.setattr(web.app, "run", lambda **how: started.append(how))
+    web.main()
+    return started
+
+
+def test_the_launcher_stays_on_loopback_without_a_warning(monkeypatch,
+                                                          capsys):
+    started = _launch(monkeypatch, "127.0.0.1")
+    printed = capsys.readouterr().out
+    assert started == [{"host": "127.0.0.1", "port": web.PORT,
+                        "debug": web.DEBUG}]
+    assert "!!" not in printed
+    assert "Tally on http://127.0.0.1:%d" % web.PORT in printed
+
+
+def test_the_launcher_says_what_binding_the_network_costs(monkeypatch,
+                                                          capsys):
+    """HOST=0.0.0.0 is how a phone reaches this, and there is no login. The
+    warning is the one line between that and a café's wi-fi reading the
+    ledger, so it is asserted, and asserted to come first."""
+    started = _launch(monkeypatch, "0.0.0.0")
+    lines = capsys.readouterr().out.splitlines()
+    assert started[0]["host"] == "0.0.0.0"
+    assert lines[0] == "!! Bound to 0.0.0.0 with no login."
+    assert lines[1] == "!! Anyone on this network can read and add expenses."
+    assert lines[2].startswith("Tally on http://0.0.0.0:")

@@ -43,4 +43,8 @@ jobs:
         # one -- so the test that holds the two apps' CSV column names
         # together skips here rather than failing. It runs locally, where both
         # repositories are present, which is where a rename would happen.
-        run: pytest -q -rs
+        #
+        # Coverage is enforced here, not just reported: line and branch, over
+        # every module .coveragerc's `source = .` finds -- tools/ included --
+        # and the job fails below 100%. pytest-cov comes from requirements.txt.
+        run: pytest -q -rs --cov --cov-branch --cov-report=term-missing --cov-fail-under=100

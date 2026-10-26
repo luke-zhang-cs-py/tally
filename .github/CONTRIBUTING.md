@@ -48,7 +48,11 @@ and one of them had been hiding a real failure mode behind a blank string.
 
 ## Tests
 
-`pytest -q` — coverage is 100%, and is expected to stay there. The test count
+`pytest -q --cov` — line and branch coverage is 100% over every module,
+`tools/` included, and CI fails the build below that. `.coveragerc` measures
+the whole project, so a new file nothing imports counts against the total
+rather than vanishing from it. The only exclusion is the `if __name__ ==
+"__main__":` line, which calls a tested `main()` and nothing else. The test count
 is not typed here; the README and `docs/index.html` carry it, and
 `tests/test_published_figures.py` keeps both true.
 

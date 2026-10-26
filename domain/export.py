@@ -42,8 +42,14 @@ def as_csv(connection, first=None, last=None):
         "WHERE spent_on BETWEEN ? AND ? ORDER BY spent_on, id",
         (first.isoformat(), last.isoformat())).fetchall()
 
-    buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=COLUMNS, lineterminator="\n")
+    # Written with "\r\n" and each row's terminator then swapped for "\n".
+    # Python 3.10 and 3.11 quote a field only for the characters of the line
+    # terminator in use, so with "\n" a note holding a bare \r went out
+    # unquoted and the file could not be read back. With "\r\n" every version
+    # quotes both, and the file is byte-for-byte what 3.12+ writes with "\n".
+    lines = []
+    writer = csv.DictWriter(_Sink(lines), fieldnames=COLUMNS,
+                            lineterminator="\r\n")
     writer.writeheader()
     for row in rows:
         writer.writerow({
@@ -53,7 +59,19 @@ def as_csv(connection, first=None, last=None):
             "Amount": money.plain(-row["amount"]),
             "Currency": row["currency"],
         })
-    return buffer.getvalue()
+    return "".join(line[:-2] + "\n" for line in lines)
+
+
+class _Sink:
+    """A file for csv's writer that keeps each row as its own string.
+
+    The writer makes one write() per row, so the terminator is the last two
+    characters of each, and replacing it cannot touch a line break inside a
+    quoted note.
+    """
+
+    def __init__(self, lines):
+        self.write = lines.append
 
 
 def _description(category, note):
