@@ -10,5 +10,8 @@ pytest>=7.4,<10
 # tests/test_published_figures.py measures the published figures with, so
 # without it that test errors rather than skips -- and CI installs exactly
 # this file. pytest-cov is what the documented coverage command asks for.
-coverage>=7.0
+# 7.2.6 is the oldest coverage that passes the 100% branch gate on Python
+# 3.12: before it, every comprehension is reported as a partial branch
+# (`->exit`) on code that is fully covered.
+coverage>=7.2.6
 pytest-cov>=4.0

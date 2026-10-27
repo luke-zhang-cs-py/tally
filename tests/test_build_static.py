@@ -325,6 +325,7 @@ def test_a_money_port_that_answers_differently_is_refused(tmp_path):
 
 def test_a_port_that_agrees_passes_the_query_check(page):
     before = entries.today
+    # The three not in either list: reconciles, overview and overview.on.
     calls = len(build.STORE_CALLS) + len(build.EXPORT_CALLS) + 3
     assert build.check_queries(page) == calls
     assert entries.today is before, "the fixed date leaked out of the check"

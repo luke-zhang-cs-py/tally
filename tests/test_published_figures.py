@@ -13,8 +13,8 @@ What is checked statically, so it works in CI with no coverage run:
 
   * every module the page lists exists, with the line count it claims;
   * its statement count is what `coverage` counts, using this repo's own
-    `.coveragerc` — which is what keeps the corpus tools and the model
-    downloader out, and everything else in;
+    `.coveragerc` — which measures the whole project, `tools/` included,
+    and leaves out only the tests and a local virtualenv;
   * no module in the project is missing from the page;
   * every test file and its collected count.
 
@@ -89,9 +89,9 @@ def source_files():
 def omit_patterns():
     """The omit patterns from .coveragerc, forward-slashed.
 
-    Matched with fnmatch rather than compared as strings: this project omits
-    `tools_*.py`, and an equality check called that "not omitted" for all
-    five files the pattern covers.
+    Matched with fnmatch rather than compared as strings: a pattern such as
+    `tests/*` covers many files, and an equality check would call every one
+    of them "not omitted".
     """
     import coverage
     config = os.path.join(ROOT, ".coveragerc")
@@ -419,6 +419,24 @@ def test_every_test_file_and_its_count_are_the_real_ones(page):
         f"the page's test table does not match the suite.\n"
         f"  page:      {sorted(listed.items())}\n"
         f"  collected: {sorted(real.items())}")
+
+
+def test_the_test_line_count_is_the_measured_one(page):
+    """TEST_LINES is printed twice on the page, as lines of test against
+    lines of code. refresh_figures.py writes it; this reads it back, so it
+    is held to the same standard as every other figure here."""
+    found = re.search(r"var TEST_LINES = (\d+);", page)
+    assert found, "the page has no TEST_LINES figure to check"
+    real = 0
+    for here, dirs, names in os.walk(os.path.join(ROOT, "tests")):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        for name in names:
+            if name.endswith(".py"):
+                with io.open(os.path.join(here, name),
+                             encoding="utf-8") as handle:
+                    real += len(handle.read().splitlines())
+    assert int(found.group(1)) == real, (
+        f"the page says {found.group(1)} lines of test, measured {real}")
 
 
 def test_the_page_says_when_it_was_measured(page):

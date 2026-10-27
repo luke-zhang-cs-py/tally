@@ -5,6 +5,13 @@ source = .
 branch = True
 omit =
     tests/*
+    # A virtualenv made in the project root, which is where most people
+    # make one. `source = .` with include_namespace_packages would
+    # otherwise measure every file in it: run from a .venv here, the
+    # report listed over a thousand site-packages files and could never
+    # reach 100%. These hold no project code; both are gitignored.
+    .venv/*
+    venv/*
 
 [report]
 # tools/ has no __init__.py, and without this a source directory that is not
@@ -12,6 +19,9 @@ omit =
 include_namespace_packages = True
 fail_under = 100
 show_missing = True
-exclude_also =
+# exclude_lines, not exclude_also: exclude_also keeps coverage's own
+# defaults, so `# pragma: no cover`, `if TYPE_CHECKING:` and `...` bodies
+# would still drop lines from the total. This is the whole list.
+exclude_lines =
     # The script entry points. Each one only calls main(), which is tested.
     if __name__ == .__main__.:
