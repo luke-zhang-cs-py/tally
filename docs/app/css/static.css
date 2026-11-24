@@ -11,41 +11,45 @@
    Somebody who records a fortnight of spending here and then clears their
    site data has lost it, and the only honest place to say so is before they
    start.
+
+   Colours come from the theme tokens at the top of style.css, so the banner
+   follows the page into either theme; --color-banner is defined there for it.
    --------------------------------------------------------------------------- */
 
 .staticBanner {
-  margin: 0; padding: 11px 16px 13px;
-  border-bottom: 1px solid var(--line);
-  border-left: 3px solid var(--warn);
-  background: #1c1a15;
-  color: var(--ink-dim);
-  font-size: var(--t-small);
-  line-height: 1.65;
+  margin: 0; padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-banner);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
 }
 
-.staticBanner b { color: var(--ink); font-weight: 600; }
+.staticBanner b { color: var(--color-text-primary); font-weight: var(--weight-semibold); }
 .staticBanner code {
-  font: 400 11px var(--mono); color: var(--ink);
-  background: var(--panel-2); border-radius: 4px; padding: 1px 4px;
+  font: var(--weight-regular) var(--text-xs) var(--font-mono); color: var(--color-text-primary);
+  background: var(--color-surface-subtle); border-radius: var(--radius-xs); padding: 1px var(--space-1);
 }
-.staticBanner a { color: var(--accent); text-decoration: none; }
-.staticBanner a:hover { text-decoration: underline; }
+.staticBanner a { color: var(--color-accent); text-decoration: none; }
+.staticBanner a:hover { color: var(--color-accent-hover); text-decoration: underline; }
 
 /* Its own line, and only ever written to by static-ui.js when the store this
    build depends on is not actually there -- a private window, or a browser
    with storage switched off. In that case nothing survives the tab closing,
    which is a much stronger claim than the banner above it makes. */
 .staticBanner .warn {
-  display: block; margin-top: 6px; color: var(--bad); font-weight: 500;
+  display: block; margin-top: var(--space-2); color: var(--color-danger);
+  font-weight: var(--weight-medium);
 }
 
 /* The counterpart of "it lives in this browser": a way to take it back out
    again. Sized like the chips in style.css so it does not read as a control
    the Flask app also has. */
 .staticBanner .forget {
-  margin-top: 8px; font: 400 var(--t-small) var(--text);
-  background: var(--panel-2); color: var(--ink-dim);
-  border: 1px solid var(--line); border-radius: 999px;
-  padding: 5px 11px; cursor: pointer;
+  margin-top: var(--space-2); font: var(--weight-regular) var(--text-sm) var(--font-sans);
+  background: var(--color-surface-subtle); color: var(--color-text-muted);
+  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3); cursor: pointer;
 }
-.staticBanner .forget:hover { color: var(--ink); border-color: var(--ink-faint); }
+.staticBanner .forget:hover { color: var(--color-text-primary); border-color: var(--color-border-strong); }

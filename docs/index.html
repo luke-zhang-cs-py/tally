@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,152 +10,205 @@
      page derives, so it is the first thing to go stale. -->
 <meta property="og:description" content="Record a purchase in the seconds after you make it. Local only, integer cents, and a CSV that imports straight into the wallet app.">
 <meta property="og:type" content="website">
+<!-- Not needed to theme the page: class="theme-dark" on <html> already does
+     that, with or without JavaScript. This only restores a theme picked on
+     any page of this site (the key 'theme' is shared across the origin),
+     ahead of first paint so it never flashes. -->
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('theme'); } catch (e) { /* storage blocked */ }
+  if (/^[a-z]+$/.test(saved)) document.documentElement.classList.replace('theme-dark', 'theme-' + saved);
+})();
+</script>
 <style>
-/* The warm surface this family of pages uses. The marks on top come from the
- * validated palette and were re-run against *this* surface, because contrast
- * only means anything against the colour the chart actually sits on:
- *
- *   series  #2a78d6  on #fffdf7   all five checks PASS (light)
- *   series  #3987e5  on #1a1a19   all five checks PASS (dark)
- *   good    #0ca30c  3.30:1
- *   warning #fab219  1.80:1  sub-3:1 BY DESIGN -> always icon + label
- *   crit    #d03b3b  4.72:1
- *
- * Run as a categorical set the status colours fail on #fab219, and are meant
- * to: status is not a categorical palette, and amber is legal only with a
- * glyph and a word beside it. Every use of it here has both.
- *
- * Dark is a selected set stepped for the dark surface, not an inversion. */
-.viz-root {
-  color-scheme: light;
-  --plane:     #ece6d6;
-  --surface:   #fffdf7;
-  --ink:       #12161d;
-  --ink-2:     #3c4453;
-  --ink-muted: #8d7a52;
-  --grid:      #ece6d6;
-  --ring:      #ded5bf;
-  --code-bg:   #f6f1e4;
-  --series:    #2a78d6;
-  --track:     #ece6d6;
-  --good:      #0ca30c;
-  --warning:   #fab219;
-  --critical:  #d03b3b;
+/* ======================================================================
+   DESIGN TOKENS -- the write-up template this family of pages shares.
+   1. Theme-independent tokens (spacing, type, shape) live on :root.
+   2. Colour tokens live in one block per theme, keyed on a class on <html>.
+      The class is in the markup, so the page is themed with no JavaScript.
+   3. Every rule below reads semantic tokens only, never a raw colour.
+   To add a theme: copy a theme block, rename it .theme-<name>, set every
+   token in it, and add <name> to THEMES in the script at the bottom.
+   Nothing else changes, and tests/test_theme.py checks the new theme's
+   pairings for WCAG AA.
+
+   The palette is the family's shared block, word for word in every copy.
+   Every text pairing is at least 4.5:1 and every UI pairing at least 3:1 in
+   both themes. --color-warning (amber) is a fill only, always beside a glyph
+   and a word, and never a text colour.
+   ====================================================================== */
+:root {
+  /* spacing: --space-N is N x 4px. 1-2px offsets are hairlines, not spacing. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-7: 28px; --space-9: 36px; --space-11: 44px;
+
+  /* typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-3xs: 11px; --text-2xs: 11.5px; --text-xs: 12px; --text-sm: 12.5px; --text-base: 13px;
+  --text-md: 13.5px; --text-lg: 14px; --text-body: 15px; --text-xl: 23px; --text-2xl: 27px;
+  --leading-tile: 1.12; --leading-body: 1.55; --leading-code: 1.7;
+  --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600;
+  --tracking-tight: -0.2px; --tracking-mono: .02em; --tracking-caps: .06em; --tracking-wide: .07em;
+
+  /* shape */
+  --radius-2xs: 3px; --radius-xs: 4px; --radius-sm: 5px; --radius-md: 8px; --radius-lg: 10px;
 }
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) .viz-root {
-    color-scheme: dark;
-    --plane: #0d0d0d; --surface: #1a1a19;
-    --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
-    --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
-    --series: #3987e5; --track: #2c2c2a;
-  }
-}
-:root[data-theme="dark"] .viz-root {
+
+/* ---- themes. :where(:root) has no specificity, so it is only the fallback
+   for an <html> carrying no theme class or an unknown one. */
+:where(:root), .theme-dark {
   color-scheme: dark;
-  --plane: #0d0d0d; --surface: #1a1a19;
-  --ink: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
-  --grid: #2c2c2a; --ring: #383835; --code-bg: #21201e;
-  --series: #3987e5; --track: #2c2c2a;
+  --color-bg: #0d0d0d; --color-surface: #1a1a19; --color-surface-subtle: #21201e;
+  --color-border: #383835; --color-border-strong: #6e6c66;
+  --color-text-primary: #ffffff; --color-text-muted: #c3c2b7; --color-text-subtle: #959389;
+  --color-accent: #4b93ea; --color-accent-hover: #7ab0f0; --color-accent-subtle: #14263c; --color-text-on-accent: #0d0d0d;
+  --color-danger: #f06a6a; --color-success: #3cc13c; --color-warning: #fab219;
+  --color-grid: #2c2c2a; --color-track: #2c2c2a;
+}
+.theme-light {
+  color-scheme: light;
+  --color-bg: #ece6d6; --color-surface: #fffdf7; --color-surface-subtle: #f6f1e4;
+  --color-border: #ded5bf; --color-border-strong: #7a7466;
+  --color-text-primary: #12161d; --color-text-muted: #3c4453; --color-text-subtle: #665632;
+  --color-accent: #1f63b8; --color-accent-hover: #174f94; --color-accent-subtle: #dfe9f7; --color-text-on-accent: #ffffff;
+  --color-danger: #b02e2e; --color-success: #0a6e0a; --color-warning: #fab219;
+  --color-grid: #ece6d6; --color-track: #ece6d6;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 .viz-root {
-  --text: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  padding: 34px 24px 44px;
-  font: 15px/1.55 var(--text);
-  background: var(--plane); color: var(--ink);
+  padding: var(--space-9) var(--space-6) var(--space-11);
+  font: var(--text-body)/var(--leading-body) var(--font-sans);
+  background: var(--color-bg); color: var(--color-text-primary);
   min-height: 100vh;
 }
 main { max-width: 980px; margin: 0 auto; }
 
 .crumb {
-  margin: 0 0 6px; font: 400 12px var(--mono); color: var(--ink-muted);
-  letter-spacing: .02em;
+  margin: 0 0 var(--space-2); font: var(--weight-regular) var(--text-xs) var(--font-mono);
+  color: var(--color-text-subtle); letter-spacing: var(--tracking-mono);
 }
-h1 { font-size: 23px; margin: 0 0 5px; letter-spacing: -0.2px; }
-.lede { color: var(--ink-2); margin: 0; font-size: 15px; max-width: 68ch; }
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; flex-wrap: wrap; }
-.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+h1 { font-size: var(--text-xl); margin: 0 0 var(--space-1); letter-spacing: var(--tracking-tight); }
+.lede { color: var(--color-text-muted); margin: 0; font-size: var(--text-body); max-width: 68ch; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-5); flex-wrap: wrap; }
+.controls { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 button, .btn {
-  font: 400 13px var(--text); cursor: pointer; text-decoration: none;
+  font: var(--weight-regular) var(--text-base) var(--font-sans); cursor: pointer; text-decoration: none;
   display: inline-block;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--ring); border-radius: 8px; padding: 7px 12px;
+  background: var(--color-surface); color: var(--color-text-primary);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3);
 }
-button:hover, .btn:hover { border-color: var(--ink-muted); }
-button[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
+button:hover, .btn:hover { border-color: var(--color-border-strong); }
+button[aria-pressed="true"] { border-color: var(--color-accent); color: var(--color-accent); }
 
 /* ------------------------------------------------------------ stat tiles */
 /* A bare stat tile is the one form that ships without a hover layer: there is
  * no plot to interrogate, just the figure and what it counts. */
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin: 26px 0 10px; }
-.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; }
-.tile .k { display: block; color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
-.tile .v { display: block; margin-top: 3px; font: 600 27px/1.12 var(--text); font-variant-numeric: tabular-nums; }
-.tile .n { display: block; margin-top: 2px; color: var(--ink-muted); font-size: 12px; }
+.tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
+  gap: var(--space-3); margin: var(--space-7) 0 var(--space-3);
+}
+.tile {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-4);
+}
+.tile .k {
+  display: block; color: var(--color-text-muted); font-size: var(--text-3xs);
+  text-transform: uppercase; letter-spacing: var(--tracking-wide);
+}
+.tile .v {
+  display: block; margin-top: var(--space-1);
+  font: var(--weight-semibold) var(--text-2xl)/var(--leading-tile) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.tile .n { display: block; margin-top: 2px; color: var(--color-text-subtle); font-size: var(--text-xs); }
 
-.note { color: var(--ink-muted); font-size: 13px; max-width: 80ch; margin: 12px 0 0; }
+.note { color: var(--color-text-subtle); font-size: var(--text-base); max-width: 80ch; margin: var(--space-3) 0 0; }
 
 /* ---------------------------------------------------------------- panels */
-.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 17px 19px; margin-top: 22px; }
-.panel h2 { margin: 0 0 2px; font-size: 15px; }
-.panel h3 { margin: 20px 0 6px; font-size: 13px; color: var(--ink-2); }
-.panel .sub { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; max-width: 76ch; }
-.panel p { font-size: 14px; color: var(--ink-2); max-width: 76ch; }
-.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; }
+.panel {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); margin-top: var(--space-6);
+}
+.panel h2 { margin: 0 0 2px; font-size: var(--text-body); }
+.panel h3 { margin: var(--space-5) 0 var(--space-2); font-size: var(--text-base); color: var(--color-text-muted); }
+.panel .sub { margin: 0 0 var(--space-4); color: var(--color-text-muted); font-size: var(--text-base); max-width: 76ch; }
+.panel p { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 76ch; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: var(--space-6); }
 
 /* Thin marks on a recessive track, 4px rounding on the data end only so the
  * mark stays anchored flat to the baseline it grows from. */
-.bars { display: grid; gap: 9px; }
-.bar { display: grid; grid-template-columns: 130px 1fr 92px; gap: 12px; align-items: center; }
-.bar .lab { font: 400 12.5px var(--mono); color: var(--ink-2); }
-.bar .rail { position: relative; height: 12px; background: var(--track); border-radius: 3px; }
-.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--series); border-radius: 0 4px 4px 0; }
-.bar .val { text-align: right; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
-.bar:hover .rail { outline: 2px solid var(--ring); outline-offset: 2px; }
+.bars { display: grid; gap: var(--space-2); }
+.bar { display: grid; grid-template-columns: 130px 1fr 92px; gap: var(--space-3); align-items: center; }
+.bar .lab { font: var(--weight-regular) var(--text-sm) var(--font-mono); color: var(--color-text-muted); }
+.bar .rail { position: relative; height: 12px; background: var(--color-track); border-radius: var(--radius-2xs); }
+.bar .fill {
+  position: absolute; inset: 0 auto 0 0; background: var(--color-accent);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+.bar .val {
+  text-align: right; font: var(--weight-medium) var(--text-xs) var(--font-mono);
+  font-variant-numeric: tabular-nums; color: var(--color-text-primary);
+}
+.bar:hover .rail { outline: 2px solid var(--color-border); outline-offset: 2px; }
 
 /* ----------------------------------------------------------------- table */
 table { width: 100%; border-collapse: collapse; }
-caption { text-align: left; color: var(--ink-2); font-size: 13px; padding-bottom: 10px; }
-th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--grid); font-size: 13px; vertical-align: top; }
-th { color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
-td.mono { font-family: var(--mono); font-size: 12px; }
-tr.total td { border-bottom: none; font-weight: 600; }
+caption { text-align: left; color: var(--color-text-muted); font-size: var(--text-base); padding-bottom: var(--space-3); }
+th, td {
+  text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--color-grid);
+  font-size: var(--text-base); vertical-align: top;
+}
+th { color: var(--color-text-muted); font-size: var(--text-3xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+td.mono { font-family: var(--font-mono); font-size: var(--text-xs); }
+tr.total td { border-bottom: none; font-weight: var(--weight-semibold); }
 [hidden] { display: none !important; }
 
-code { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); border: 1px solid var(--grid); border-radius: 4px; padding: 1px 5px; }
+code {
+  font-family: var(--font-mono); font-size: var(--text-sm); background: var(--color-surface-subtle);
+  border: 1px solid var(--color-grid); border-radius: var(--radius-xs); padding: 1px var(--space-1);
+}
 pre {
-  background: var(--code-bg); border: 1px solid var(--grid); border-radius: 8px;
-  padding: 13px 15px; overflow-x: auto;
-  font: 12.5px/1.7 var(--mono); color: var(--ink); margin: 12px 0 0;
+  background: var(--color-surface-subtle); border: 1px solid var(--color-grid); border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4); overflow-x: auto;
+  font: var(--text-sm)/var(--leading-code) var(--font-mono); color: var(--color-text-primary); margin: var(--space-3) 0 0;
 }
 
 /* Numbered steps. */
-.flow { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
-.flow li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 13.5px; color: var(--ink-2); }
+.flow { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-3); }
+.flow li {
+  display: grid; grid-template-columns: 26px 1fr; gap: var(--space-3);
+  font-size: var(--text-md); color: var(--color-text-muted);
+}
 .step {
-  font: 500 11px var(--mono); color: var(--series);
-  border: 1px solid var(--ring); border-radius: 5px;
+  font: var(--weight-medium) var(--text-3xs) var(--font-mono); color: var(--color-accent);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   text-align: center; padding: 1px 0; height: 20px;
 }
 
-/* Status. Never colour alone: each carries a glyph and a word, which is what
- * makes the sub-3:1 amber legal. */
-.flag { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px var(--mono); white-space: nowrap; }
-.flag .g { font-size: 12px; }
-.flag.good { color: var(--good); }
-.flag.warn { color: var(--warning); }
-.flag.crit { color: var(--critical); }
+/* Status. Never colour alone: each carries a glyph and a word. This copy
+ * shows only the good and critical flags; amber is a fill in this family,
+ * never a text colour, so there is no text rule for it here. */
+.flag {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  font: var(--weight-medium) var(--text-2xs) var(--font-mono); white-space: nowrap;
+}
+.flag .g { font-size: var(--text-xs); }
+.flag.good { color: var(--color-success); }
+.flag.crit { color: var(--color-danger); }
 
-dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0 0; font-size: 13px; }
-dl.kv dt { color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+dl.kv {
+  display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4);
+  margin: var(--space-3) 0 0; font-size: var(--text-base);
+}
+dl.kv dt { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--text-xs); }
 dl.kv dd { margin: 0; }
 
-footer { margin-top: 28px; color: var(--ink-muted); font-size: 12.5px; max-width: 86ch; }
+footer { margin-top: var(--space-7); color: var(--color-text-subtle); font-size: var(--text-sm); max-width: 86ch; }
 footer a { color: inherit; }
 </style>
 </head>
@@ -177,7 +230,7 @@ footer a { color: inherit; }
     </p>
   </div>
   <div class="controls">
-    <button id="themeBtn" type="button">Theme</button>
+    <button id="themeBtn" type="button" aria-label="Switch to light theme">Light theme</button>
     <button id="tableBtn" type="button" aria-pressed="false">Table view</button>
     <a class="btn" href="https://github.com/luke-zhang-cs-py/tally">Repository</a>
     <a class="btn" href="app/"
@@ -380,7 +433,8 @@ var TESTS = [
   { file: 'test_export.py',            n: 30, of: 'the file, the reconcile, and the wallet’s column names' },
   { file: 'test_refresh_figures.py',   n: 21, of: 'that this page’s rewriter is right and leaves no diff' },
   { file: 'test_published_figures.py', n: 12, of: 'the numbers on this page, against a fresh measurement' },
-  { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
+  { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' },
+  { file: 'test_theme.py',             n:  0, of: 'both themes at WCAG AA, and a toggle that remembers' }
 ];
 
 var TEST_LINES = 3032;
@@ -646,11 +700,39 @@ function drawSamples() {
 
 /* -------------------------------------------------------------- controls */
 
+/* THEMES in order. Each name needs a matching .theme-<name> block in the
+ * <style> above, and the first is the one written into the markup. The page
+ * is already themed before this runs; this steps the button through them and
+ * remembers the choice under 'theme', which every page on the site shares. */
+var THEMES = ['dark', 'light'];
+
+function currentTheme() {
+  var root = document.documentElement;
+  return THEMES.filter(function (name) {
+    return root.classList.contains('theme-' + name);
+  })[0] || THEMES[0];
+}
+
+function nextTheme(name) {
+  return THEMES[(THEMES.indexOf(name) + 1) % THEMES.length];
+}
+
+function applyTheme(name) {
+  var root = document.documentElement;
+  var rest = root.className.replace(/(^|\s)theme-\S+/g, ' ').trim();
+  root.className = (rest ? rest + ' ' : '') + 'theme-' + name;
+  var next = nextTheme(name);
+  el('themeBtn').textContent = next.charAt(0).toUpperCase() + next.slice(1) + ' theme';
+  el('themeBtn').setAttribute('aria-label', 'Switch to ' + next + ' theme');
+}
+
+/* Also drops a saved theme that no longer exists, back to the first. */
+applyTheme(currentTheme());
+
 el('themeBtn').addEventListener('click', function () {
-  var set = document.documentElement.getAttribute('data-theme');
-  var dark = set ? set === 'dark'
-    : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  var next = nextTheme(currentTheme());
+  try { localStorage.setItem('theme', next); } catch (e) { /* not remembered */ }
+  applyTheme(next);
 });
 
 el('tableBtn').addEventListener('click', function () {

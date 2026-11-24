@@ -1,11 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="theme-dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12141a">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Tally</title>
+<!-- Not needed to theme the page: class="theme-dark" above already does
+     that, with or without JavaScript. This only restores a theme picked
+     before, ahead of first paint so it never flashes. The key is 'theme',
+     shared with every page on the same origin, and nothing else in the app
+     reads, clears or exports it -- its own keys all start with "tally.". -->
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('theme'); } catch (e) { /* storage blocked */ }
+  if (/^[a-z]+$/.test(saved)) document.documentElement.classList.replace('theme-dark', 'theme-' + saved);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -17,6 +29,10 @@
     <h1>Tally</h1>
     <p class="sub" id="todayLabel">—</p>
   </div>
+  <button type="button" class="themeToggle" id="themeBtn" aria-label="Switch to light theme">
+    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
 </header>
 
 <!-- The figure you opened the app to see, before anything is tapped. -->

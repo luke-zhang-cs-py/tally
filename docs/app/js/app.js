@@ -372,6 +372,48 @@ function load() {
   });
 }
 
+/* -------------------------------------------------------------- the theme */
+/* THEMES in order. Each name needs a matching .theme-<name> block in
+ * static/css/style.css, and the first is the one written into the markup.
+ * The page is already themed before this runs -- the class is in the HTML,
+ * and a saved choice is restored by the script in <head> -- so all this does
+ * is make the button step through them and remember the choice. The key is
+ * 'theme', shared with every page on this origin; the app's own keys all
+ * start with "tally.", so nothing that clears or exports entries touches it. */
+var THEMES = ['dark', 'light'];
+
+function currentTheme() {
+  var root = document.documentElement;
+  return THEMES.filter(function (name) {
+    return root.classList.contains('theme-' + name);
+  })[0] || THEMES[0];
+}
+
+function nextTheme(name) {
+  return THEMES[(THEMES.indexOf(name) + 1) % THEMES.length];
+}
+
+function applyTheme(name) {
+  var root = document.documentElement;
+  var rest = root.className.replace(/(^|\s)theme-\S+/g, ' ').trim();
+  root.className = (rest ? rest + ' ' : '') + 'theme-' + name;
+  el('themeBtn').setAttribute('aria-label',
+                              'Switch to ' + nextTheme(name) + ' theme');
+  /* The browser's own toolbar follows the page. */
+  var bg = getComputedStyle(root).getPropertyValue('--color-bg').trim();
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && bg) meta.setAttribute('content', bg);
+}
+
+/* Also drops a saved theme that no longer exists, back to the first. */
+applyTheme(currentTheme());
+
+el('themeBtn').addEventListener('click', function () {
+  var next = nextTheme(currentTheme());
+  try { window.localStorage.setItem('theme', next); } catch (e) { /* not remembered */ }
+  applyTheme(next);
+});
+
 /* ------------------------------------------------------------- wiring */
 
 el('keys').addEventListener('click', function (event) {
