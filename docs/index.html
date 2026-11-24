@@ -406,7 +406,7 @@ footer a { color: inherit; }
 /* Every number on this page is read from here, so the tiles, the charts and
  * the table cannot drift apart.
  *
- * Measured on 26 October 2026 in the repository: `pytest -q --cov` for the
+ * Measured on 24 November 2026 in the repository: `pytest -q --cov` for the
  * statements and what is uncovered, `wc -l` for length, and `pytest
  * --collect-only -q` for the test counts. Not estimated.
  * tests/test_published_figures.py checks them against a fresh measurement,
@@ -430,14 +430,14 @@ var TESTS = [
   { file: 'test_entries.py',           n: 57, of: 'the queries, the habits, and the month boundary' },
   { file: 'test_app.py',               n: 56, of: 'the routes, the queue, and the rejected-entry rule' },
   { file: 'test_build_static.py',      n: 38, of: 'that the build refuses every kind of disagreement' },
+  { file: 'test_theme.py',             n: 31, of: 'both themes at WCAG AA, and a toggle that remembers' },
   { file: 'test_export.py',            n: 30, of: 'the file, the reconcile, and the wallet’s column names' },
   { file: 'test_refresh_figures.py',   n: 21, of: 'that this page’s rewriter is right and leaves no diff' },
   { file: 'test_published_figures.py', n: 12, of: 'the numbers on this page, against a fresh measurement' },
-  { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' },
-  { file: 'test_theme.py',             n:  0, of: 'both themes at WCAG AA, and a toggle that remembers' }
+  { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 3032;
+var TEST_LINES = 3513;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
@@ -745,7 +745,7 @@ el('tableBtn').addEventListener('click', function () {
 });
 
 el('footNote').textContent =
-  'Figures measured on 26 October 2026 in the repository with pytest ' +
+  'Figures measured on 24 November 2026 in the repository with pytest ' +
   '--cov, wc -l and pytest --collect-only, and checked against a fresh ' +
   'measurement by tests/test_published_figures.py, because a page like this ' +
   'goes stale the moment a test is added. Everything here is read from one ' +
