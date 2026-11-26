@@ -469,6 +469,8 @@ def test_the_page_is_the_template_with_the_server_parts_replaced():
     html = build.page_html(template())
     assert "<title>Tally — browser build</title>" in html
     assert '<link rel="stylesheet" href="css/static.css">' in html
+    assert '<link rel="stylesheet" href="../fonts.css">' in html
+    assert "googleapis" not in html
     assert 'id="exportCsv" href="#"' in html
     assert 'href="/export.csv"' not in html
     assert "{{" not in html and "{%" not in html

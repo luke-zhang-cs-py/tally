@@ -894,6 +894,16 @@ def page_html(template):
         text, "<title>Tally</title>", "<title>Tally \u2014 browser build</title>",
         "retitle the page")
 
+    # The fonts are not copied into docs/app/: the build writes text, and
+    # docs/fonts.css with its fonts/ folder is already published one level
+    # up, beside the write-up that loads the same files.
+    text = replace_once(
+        text,
+        "<link rel=\"stylesheet\" href=\"{{ url_for('static', "
+        "filename='fonts.css') }}\">",
+        '<link rel="stylesheet" href="../fonts.css">',
+        "point the fonts at the copy published in docs/")
+
     text = replace_once(
         text,
         "<link rel=\"stylesheet\" href=\"{{ url_for('static', "

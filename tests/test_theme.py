@@ -105,7 +105,12 @@ GROUPS = {
             # entry rows and inputs, a key held down, and the build's banner
             [(fg, bg) for fg in ("text-primary", "text-muted", "text-subtle")
              for bg in ("bg", "surface", "surface-subtle", "surface-pressed",
-                        "banner", "accent-subtle")]
+                        "banner")]
+            # accent-subtle is not painted by any rule here (see "unpainted"
+            # below, which fails the moment one does). The palette holds the
+            # two stronger text colours on it; text-subtle, at 4.31:1 in
+            # light, would need checking -- and passing -- before it could be.
+            + [(fg, "accent-subtle") for fg in ("text-primary", "text-muted")]
             + [("accent", "surface-subtle"),      # a habit's price
                ("accent", "surface-pressed"),     # ... while it is pressed
                ("accent", "banner"),              # the banner's link
@@ -119,11 +124,17 @@ GROUPS = {
                ("danger", "surface-subtle"),      # delete, hovered, in a row
                ("danger", "banner")]              # no-storage warning
         ),
+        # Inputs and the currency select are filled with bg, so their edge
+        # is checked against both sides of it: the card outside and the
+        # field inside.
         "ui": [("border-strong", "surface"),       # input and select edges
-               ("border-strong", "surface-subtle"),
+               ("border-strong", "bg"),
                ("accent", "surface"),              # focus ring
                ("accent", "surface-subtle"),       # bar on its rail
                ("accent", "bg")],                  # toggle focus ring
+        # Defined by the palette but not a background anything sits on.
+        "unpainted": ["accent-subtle"],
+        "rules": lambda: read(*APP_CSS) + read(*BANNER_CSS),
     },
     "writeup": {
         "css": lambda: styles_of(read(*WRITEUP)),
@@ -141,6 +152,8 @@ GROUPS = {
                ("accent", "surface"),                # a pressed button's edge
                ("border-strong", "surface"),         # a hovered button's edge
                ("border-strong", "bg")],
+        "unpainted": [],
+        "rules": lambda: styles_of(read(*WRITEUP)),
     },
 }
 
@@ -211,6 +224,14 @@ def test_every_token_a_pairing_names_exists(group):
     assert len(named) > 8
     assert not sorted("--color-" + t for t in named
                       if "--color-" + t not in tokens)
+    # A token kept out of the text pairings above must stay off every
+    # background, or the text on it would be unchecked.
+    rules = without_comments(spec["rules"]())
+    for name in spec["unpainted"]:
+        assert not re.search(r"background[\w-]*\s*:[^;}]*var\(--color-%s\)"
+                             % re.escape(name), rules), (
+            "a rule paints --color-%s, but not every text colour is checked "
+            "against it" % name)
 
 
 @pytest.mark.parametrize("where", [APP_CSS, BANNER_CSS, WRITEUP],
@@ -248,6 +269,14 @@ def test_the_markup_opens_dark_and_restores_before_paint(where):
                      r'<button type="button" class="themeToggle" '
                      r'id="themeBtn"', html)
     assert 'aria-label="Switch to light theme"' in html
+    # The type is self-hosted (DESIGN.md): fonts.css is loaded in the head,
+    # nothing is fetched from a font service, and no banned family is named.
+    assert re.search(r'<link rel="stylesheet" href="[^"]*fonts\.css[^"]*">',
+                     head)
+    assert "googleapis" not in html and "gstatic" not in html
+    banned = re.findall(r"(Inter|Roboto|Open Sans|Arial|system-ui|"
+                        r"-apple-system|Segoe UI|Helvetica)", html)
+    assert not banned, banned
 
 
 def test_the_body_background_is_the_bg_token():

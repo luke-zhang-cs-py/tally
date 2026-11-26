@@ -28,7 +28,7 @@
 
 .staticBanner b { color: var(--color-text-primary); font-weight: var(--weight-semibold); }
 .staticBanner code {
-  font: var(--weight-regular) var(--text-xs) var(--font-mono); color: var(--color-text-primary);
+  font: var(--weight-regular) var(--text-sm) var(--font-mono); color: var(--color-text-primary);
   background: var(--color-surface-subtle); border-radius: var(--radius-xs); padding: 1px var(--space-1);
 }
 .staticBanner a { color: var(--color-accent); text-decoration: none; }
@@ -40,7 +40,7 @@
    which is a much stronger claim than the banner above it makes. */
 .staticBanner .warn {
   display: block; margin-top: var(--space-2); color: var(--color-danger);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
 }
 
 /* The counterpart of "it lives in this browser": a way to take it back out

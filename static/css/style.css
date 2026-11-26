@@ -1,8 +1,9 @@
-/* One type scale and one palette, both declared here.
+/* One type scale and one palette, both declared here (see DESIGN.md).
  *
- * Same family as the other apps: Inter for prose, IBM Plex Mono with tabular
- * figures for anything numeric, so a column of money lines up -- which is the
- * one thing a column of money has to do.
+ * Same family as the other apps: Bricolage Grotesque for headings, IBM Plex
+ * Sans for prose, IBM Plex Mono with tabular figures for anything numeric, so
+ * a column of money lines up -- which is the one thing a column of money has
+ * to do. All three are self-hosted: static/fonts.css, loaded before this file.
  *
  * Sized for a thumb first. Every control that gets tapped is at least 44px,
  * because this app is judged on the seconds between opening it and having
@@ -32,26 +33,27 @@
   --space-6: 24px;
   --space-7: 28px;
 
-  /* typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --text-2xs: 10.5px;
-  --text-xs: 11px;
-  --text-sm: 11.5px;
-  --text-base: 13px;
-  --text-md: 15px;
-  --text-lg: 16px;
-  --text-xl: 17px;
-  --text-2xl: 20px;
-  --text-3xl: 24px;
-  --text-4xl: 34px;
+  /* typography. The family scale is 3x a step: --text-sm (mono meta),
+     --text-base (body, controls), --text-xl (headings), --text-display. The
+     keypad needs a few practical sizes between them; those are app-only. */
+  --font-display: "Bricolage Grotesque", sans-serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --text-sm: 13px;
+  --text-base: 16px;
+  --text-xl: 48px;
+  --text-display: clamp(64px, 14vw, 144px);
+  --text-md: 20px;     /* app-only: key digits, the delete cross */
+  --text-lg: 24px;     /* app-only: card headings, the totals strip */
+  --text-2xl: 36px;    /* app-only: the amount being typed */
   --leading-tight: 1.1;
   --leading-snug: 1.2;
   --leading-body: 1.5;
   --leading-relaxed: 1.65;
   --weight-regular: 400;
-  --weight-medium: 500;
   --weight-semibold: 600;
+  --weight-display-light: 200;   /* display type uses only these two */
+  --weight-display-heavy: 800;
   --tracking-tight: -0.01em;
   --tracking-label: 0.05em;
   --tracking-caps: 0.06em;
@@ -71,50 +73,53 @@
    tests/test_theme.py. */
 :where(:root), .theme-dark {
   color-scheme: dark;
-  --color-bg: #12141a;               /* the page, the header */
-  --color-surface: #1a1d26;          /* cards, the totals strip */
-  --color-surface-subtle: #21252f;   /* keys, chips, inputs, entry rows, bar rails */
-  --color-surface-pressed: #2a2e3a;  /* a key or a habit button while held */
-  --color-border: #2c313d;           /* separators and card edges */
-  --color-border-strong: #6b7387;    /* form fields: 3:1 against surface and surface-subtle */
-  --color-text-primary: #e8eaf0;
-  --color-text-muted: #9aa2b4;
-  --color-text-subtle: #8e96a9;      /* was #6b7387: 3.23:1 on the keys, 5.17:1 now */
-  --color-accent: #6ea8fe;
-  --color-accent-hover: #9cc3ff;
-  --color-accent-subtle: #1c2b45;
-  --color-text-on-accent: #0d1017;
-  --color-danger: #e8695d;
-  --color-danger-subtle: #2b1a18;
-  --color-success: #4bbd8a;
-  --color-success-subtle: #16281f;
-  --color-warning: #e8b04b;          /* text here: the pending mark and the notice */
-  --color-warning-subtle: #2a2118;
-  --color-banner: #1c1a15;           /* the browser build's storage banner (static.css) */
+  --color-bg: #101B1F;               /* the page, the header, form fields */
+  --color-surface: #182529;          /* cards, the totals strip */
+  --color-surface-subtle: #202E33;   /* keys, chips, entry rows, bar rails */
+  --color-surface-pressed: #28373C;  /* a key or a habit button while held */
+  --color-border: #2C3B3F;           /* separators and card edges */
+  --color-border-strong: #607278;    /* form fields: 3:1 against surface and bg */
+  --color-text-primary: #E1E9EC;
+  --color-text-muted: #ACBABF;
+  --color-text-subtle: #97A8AE;
+  --color-accent: #DAA57A;
+  --color-accent-hover: #ECBC96;
+  --color-accent-subtle: #422E1E;
+  --color-text-on-accent: #25170C;
+  --color-danger: #DF7F78;
+  /* Extras, derived from the dominant (ash blue, hue 221) and the accent
+     (apricot, hue 60) in OKLCH: tints at the dominant's low chroma, status
+     colours that keep their meaning -- green 150, amber 88, red 25. */
+  --color-danger-subtle: #36201E;
+  --color-success: #8AC195;
+  --color-success-subtle: #1C2B1F;
+  --color-warning: #DFC176;          /* text here: the pending mark and the notice */
+  --color-warning-subtle: #2D2615;
+  --color-banner: #261F19;           /* the browser build's storage banner (static.css) */
   --icon-moon: none; --icon-sun: inline;   /* the toggle shows where it will take you */
 }
 .theme-light {
   color-scheme: light;
-  --color-bg: #f3f4f7;
-  --color-surface: #ffffff;
-  --color-surface-subtle: #eceef3;
-  --color-surface-pressed: #dfe3ea;
-  --color-border: #d5d9e2;
-  --color-border-strong: #7d8597;
-  --color-text-primary: #12141a;
-  --color-text-muted: #4a5265;
-  --color-text-subtle: #565e71;
-  --color-accent: #2059bd;
-  --color-accent-hover: #1d4fa3;
-  --color-accent-subtle: #e3ecfb;
-  --color-text-on-accent: #ffffff;
-  --color-danger: #b4372c;
-  --color-danger-subtle: #fbe6e3;
-  --color-success: #1c7a4f;
-  --color-success-subtle: #e2f3ea;
-  --color-warning: #875900;
-  --color-warning-subtle: #fbf0d9;
-  --color-banner: #faf6ec;
+  --color-bg: #EFF7FA;
+  --color-surface: #F8FDFE;
+  --color-surface-subtle: #E4EFF3;
+  --color-surface-pressed: #DEECF2;
+  --color-border: #D1DDE1;
+  --color-border-strong: #7D9096;
+  --color-text-primary: #1E282C;
+  --color-text-muted: #4C5E64;
+  --color-text-subtle: #5A6C73;
+  --color-accent: #8D5C33;
+  --color-accent-hover: #724720;
+  --color-accent-subtle: #F7E0CE;
+  --color-text-on-accent: #FFF9F4;
+  --color-danger: #A83634;
+  --color-danger-subtle: #FDE7E4;
+  --color-success: #346841;
+  --color-success-subtle: #E2F2E4;
+  --color-warning: #775C0E;
+  --color-warning-subtle: #F8EED5;
+  --color-banner: #FDF2EA;
   --icon-moon: inline; --icon-sun: none;
 }
 
@@ -135,10 +140,13 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 h1 {
-  margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-semibold);
+  margin: 0; font: var(--weight-display-heavy) var(--text-xl)/var(--leading-tight) var(--font-display);
   letter-spacing: var(--tracking-tight);
 }
-.sub { margin: 2px 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+.sub {
+  margin: 2px 0 0; color: var(--color-text-muted);
+  font: var(--weight-regular) var(--text-sm) var(--font-mono); font-variant-numeric: tabular-nums;
+}
 
 /* The theme toggle. Both icons are in the markup; the theme tokens say which
  * one shows, so it is right before any script runs. */
@@ -166,14 +174,14 @@ h1 {
 }
 .figure {
   display: block; margin-top: 2px;
-  font: var(--weight-medium) var(--text-3xl)/var(--leading-snug) var(--font-mono);
+  font: var(--weight-semibold) var(--text-lg)/var(--leading-snug) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
-.figure.small { font-size: var(--text-md); }
+.figure.small { font-size: var(--text-base); }
 /* A second currency on the same day, stacked under the first rather than
  * summed -- adding euros to dollars needs a rate this app does not have. */
 .figure .also {
-  display: block; font-size: var(--text-base); color: var(--color-text-muted); margin-top: 1px;
+  display: block; font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 1px;
 }
 
 main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: var(--gap); }
@@ -182,10 +190,15 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); padding: var(--space-4);
 }
-.card h2 { margin: 0 0 var(--space-3); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.card h2 {
+  margin: 0 0 var(--space-3);
+  font: var(--weight-display-heavy) var(--text-lg)/var(--leading-snug) var(--font-display);
+  letter-spacing: var(--tracking-tight);
+}
 .card h3 {
-  margin: var(--space-5) 0 var(--space-2); font-size: var(--text-base);
-  font-weight: var(--weight-semibold); color: var(--color-text-muted);
+  margin: var(--space-6) 0 var(--space-2);
+  font: var(--weight-display-heavy) var(--text-base)/var(--leading-snug) var(--font-display);
+  color: var(--color-text-muted);
 }
 .cardHead {
   display: flex; align-items: center; justify-content: space-between;
@@ -206,12 +219,15 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 .usual button:hover { border-color: var(--color-accent); }
 .usual button:active { background: var(--color-surface-pressed); }
-.usual .what { font-size: var(--text-base); font-weight: var(--weight-medium); }
+.usual .what { font-size: var(--text-base); font-weight: var(--weight-semibold); }
 .usual .much {
-  font: var(--weight-medium) var(--text-sm) var(--font-mono); font-variant-numeric: tabular-nums;
+  font: var(--weight-semibold) var(--text-sm) var(--font-mono); font-variant-numeric: tabular-nums;
   color: var(--color-accent);
 }
-.usual .often { font-size: var(--text-2xs); color: var(--color-text-subtle); }
+.usual .often {
+  font: var(--weight-regular) var(--text-sm) var(--font-mono); font-variant-numeric: tabular-nums;
+  color: var(--color-text-subtle);
+}
 
 /* ------------------------------------------------------------ the keypad */
 
@@ -222,25 +238,25 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 .amount {
   flex: 1; text-align: right;
-  font: var(--weight-medium) var(--text-4xl)/var(--leading-tight) var(--font-mono);
+  font: var(--weight-semibold) var(--text-2xl)/var(--leading-tight) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .amount.zero { color: var(--color-text-subtle); }
 .currencyPick select {
-  min-height: 36px; background: var(--color-surface-subtle); color: var(--color-text-primary);
+  min-height: 36px; background: var(--color-bg); color: var(--color-text-primary);
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm);
   padding: var(--space-2);
-  font: var(--weight-medium) var(--text-sm) var(--font-mono);
+  font: var(--weight-regular) var(--text-sm) var(--font-mono);
 }
 
 .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .keys button {
-  min-height: 52px; font: var(--weight-medium) var(--text-2xl) var(--font-mono);
+  min-height: 52px; font: var(--weight-semibold) var(--text-md) var(--font-mono);
   background: var(--color-surface-subtle); color: var(--color-text-primary);
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer;
 }
 .keys button:active { background: var(--color-surface-pressed); }
-.keys button.soft { font-size: var(--text-lg); color: var(--color-text-muted); }
+.keys button.soft { font-size: var(--text-base); color: var(--color-text-muted); }
 
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0 var(--space-1); }
 .chips button {
@@ -251,7 +267,7 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 .chips button[aria-pressed="true"] {
   background: var(--color-accent); border-color: var(--color-accent);
-  color: var(--color-text-on-accent); font-weight: var(--weight-medium);
+  color: var(--color-text-on-accent); font-weight: var(--weight-semibold);
 }
 
 .row {
@@ -266,7 +282,7 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 input {
   min-height: var(--tap); font: var(--weight-regular) var(--text-base) var(--font-sans);
-  background: var(--color-surface-subtle); color: var(--color-text-primary);
+  background: var(--color-bg); color: var(--color-text-primary);
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
 }
@@ -278,7 +294,7 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
   width: 100%; min-height: 52px; margin-top: var(--space-4);
   background: var(--color-accent); border: 1px solid var(--color-accent);
   color: var(--color-text-on-accent);
-  border-radius: var(--radius-md); font: var(--weight-semibold) var(--text-md) var(--font-sans);
+  border-radius: var(--radius-md); font: var(--weight-semibold) var(--text-base) var(--font-sans);
   cursor: pointer;
 }
 .save:disabled {
@@ -297,16 +313,16 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
 }
 .entries .what { font-size: var(--text-base); }
 .entries .when {
-  display: block; color: var(--color-text-subtle); font-size: var(--text-2xs);
-  font-family: var(--font-mono);
+  display: block; color: var(--color-text-subtle); font-size: var(--text-sm);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
 }
 .entries .much {
-  font: var(--weight-medium) var(--text-base) var(--font-mono); font-variant-numeric: tabular-nums;
+  font: var(--weight-semibold) var(--text-base) var(--font-mono); font-variant-numeric: tabular-nums;
 }
 .entries .pending { color: var(--color-warning); }
 .iconButton {
   background: none; border: none; color: var(--color-text-subtle);
-  min-width: 34px; min-height: 34px; font-size: var(--text-xl); cursor: pointer;
+  min-width: 34px; min-height: 34px; font-size: var(--text-md); cursor: pointer;
 }
 .iconButton:hover { color: var(--color-danger); }
 .empty { color: var(--color-text-subtle); font-size: var(--text-sm); }
@@ -325,7 +341,7 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
 }
 .bar .val {
-  text-align: right; font: var(--weight-medium) var(--text-sm) var(--font-mono);
+  text-align: right; font: var(--weight-semibold) var(--text-sm) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .bar.none .val { color: var(--color-text-subtle); }
