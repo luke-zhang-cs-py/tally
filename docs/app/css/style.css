@@ -24,15 +24,13 @@
    WCAG AA and that it sets the same tokens as the default.
    ====================================================================== */
 :root {
-  /* spacing: --space-N is N x 4px. Offsets of 1-2px are hairlines, not
-     spacing, and stay as they are. */
-  --space-1: 4px;
+  /* spacing: --space-N is N x 4px, on an 8px rhythm, so only even N exist.
+     Offsets of 1-2px are hairlines, not spacing, and stay as they are. */
   --space-2: 8px;
-  --space-3: 12px;
   --space-4: 16px;
-  --space-5: 20px;
   --space-6: 24px;
-  --space-7: 28px;
+  --space-8: 32px;
+  --space-12: 48px;
 
   /* typography. The family scale is 3x a step: --text-sm (mono meta),
      --text-base (body, controls), --text-xl (headings), --text-display. The
@@ -59,13 +57,11 @@
   --tracking-label: 0.05em;
   --tracking-caps: 0.06em;
 
-  /* shape and size */
+  /* shape and size. 4px is the most a control is rounded; layout blocks
+     are not rounded at all. */
   --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-full: 999px;
   --tap: 44px;
-  --gap: var(--space-3);
+  --gap: var(--space-4);
 }
 
 /* ---- themes. :where(:root) has no specificity, so it is only the fallback
@@ -137,7 +133,7 @@ body {
 
 .top {
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: var(--gap); padding: var(--space-5) var(--space-4) var(--space-3);
+  gap: var(--gap); padding: var(--space-6) var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 h1 {
@@ -154,8 +150,8 @@ h1 {
 .themeToggle {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: var(--tap); min-height: var(--tap); padding: 0;
-  background: var(--color-surface-subtle); color: var(--color-text-muted);
-  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  background: none; color: var(--color-text-muted);
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs);
   cursor: pointer;
 }
 .themeToggle:hover { color: var(--color-text-primary); border-color: var(--color-border-strong); }
@@ -164,11 +160,14 @@ h1 {
 .themeToggle .moon { display: var(--icon-moon); }
 .themeToggle .sun { display: var(--icon-sun); }
 
+/* Three figures on the page itself, divided by space; one hairline under
+ * the row, none between the cells and no fill behind them. */
 .totals {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 1px; background: var(--color-border); border-bottom: 1px solid var(--color-border);
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4); padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
-.total { background: var(--color-surface); padding: var(--space-3) var(--space-4); }
+.total { min-width: 0; }
 .total .label {
   display: block; color: var(--color-text-muted); font-size: var(--text-sm);
   text-transform: uppercase; letter-spacing: var(--tracking-caps);
@@ -185,14 +184,13 @@ h1 {
   display: block; font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 1px;
 }
 
-main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: var(--gap); }
+/* Sections are separated by space and their headings, not by boxes. The
+ * class is still .card because app.js shows and hides #usualCard by id. */
+main { padding: var(--space-6) var(--space-4) var(--space-8); display: grid; gap: var(--space-12); }
 
-.card {
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); padding: var(--space-4);
-}
+.card { min-width: 0; }
 .card h2 {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-4);
   font: var(--weight-display-heavy) var(--text-lg)/var(--leading-snug) var(--font-display);
   letter-spacing: var(--tracking-tight);
 }
@@ -203,18 +201,19 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 .cardHead {
   display: flex; align-items: center; justify-content: space-between;
-  gap: var(--space-3); margin-bottom: var(--space-3);
+  gap: var(--space-4); margin-bottom: var(--space-4);
 }
 .cardHead h2 { margin: 0; }
-.hint { margin: var(--space-3) 0 0; color: var(--color-text-subtle); font-size: var(--text-sm); }
+.hint { margin: var(--space-4) 0 0; color: var(--color-text-subtle); font-size: var(--text-sm); }
 
 /* -------------------------------------------------------- the shortcuts */
 
-.usual { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: var(--space-2); }
+/* A left-aligned run of buttons, each as wide as what it says. */
+.usual { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .usual button {
   min-height: var(--tap); text-align: left;
   background: var(--color-surface-subtle); border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs); padding: var(--space-2) var(--space-4);
   color: var(--color-text-primary); cursor: pointer;
   display: grid; gap: 1px;
 }
@@ -233,9 +232,9 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 /* ------------------------------------------------------------ the keypad */
 
 .amountRow {
-  display: flex; align-items: baseline; gap: var(--space-3);
-  padding: var(--space-1) 0 var(--space-3); border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--space-3);
+  display: flex; align-items: baseline; gap: var(--space-4);
+  padding: 0 0 var(--space-2); border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-4);
 }
 .amount {
   flex: 1; text-align: right;
@@ -245,7 +244,7 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 .amount.zero { color: var(--color-text-subtle); }
 .currencyPick select {
   min-height: 36px; background: var(--color-bg); color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-xs);
   padding: var(--space-2);
   font: var(--weight-regular) var(--text-sm) var(--font-mono);
 }
@@ -254,16 +253,16 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 .keys button {
   min-height: 52px; font: var(--weight-semibold) var(--text-md) var(--font-mono);
   background: var(--color-surface-subtle); color: var(--color-text-primary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs); cursor: pointer;
 }
 .keys button:active { background: var(--color-surface-pressed); }
 .keys button.soft { font-size: var(--text-base); color: var(--color-text-muted); }
 
-.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0 var(--space-1); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0 var(--space-2); }
 .chips button {
-  min-height: 36px; padding: var(--space-2) var(--space-3);
+  min-height: 36px; padding: var(--space-2) var(--space-4);
   background: var(--color-surface-subtle); color: var(--color-text-muted);
-  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs);
   font: var(--weight-regular) var(--text-base) var(--font-sans); cursor: pointer;
 }
 .chips button[aria-pressed="true"] {
@@ -272,10 +271,10 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 }
 
 .row {
-  display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap;
-  margin-top: var(--space-3);
+  display: flex; gap: var(--space-4); align-items: flex-end; flex-wrap: wrap;
+  margin-top: var(--space-4);
 }
-.field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 110px; }
+.field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 110px; }
 .field.grow { flex: 1 1 160px; }
 .field > span {
   color: var(--color-text-muted); font-size: var(--text-sm);
@@ -284,8 +283,8 @@ main { padding: var(--gap) var(--space-4) var(--space-7); display: grid; gap: va
 input {
   min-height: var(--tap); font: var(--weight-regular) var(--text-base) var(--font-sans);
   background: var(--color-bg); color: var(--color-text-primary);
-  border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-xs);
+  padding: var(--space-2) var(--space-4);
 }
 input::placeholder { color: var(--color-text-subtle); }
 input[type="date"] { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
@@ -295,7 +294,7 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
   width: 100%; min-height: 52px; margin-top: var(--space-4);
   background: var(--color-accent); border: 1px solid var(--color-accent);
   color: var(--color-text-on-accent);
-  border-radius: var(--radius-md); font: var(--weight-semibold) var(--text-base) var(--font-sans);
+  border-radius: var(--radius-xs); font: var(--weight-semibold) var(--text-base) var(--font-sans);
   cursor: pointer;
 }
 .save:disabled {
@@ -305,12 +304,12 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
 
 /* ---------------------------------------------------------- the entries */
 
-.entries { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+/* Rows of a list, one hairline between them -- not a box per entry. */
+.entries { list-style: none; margin: 0; padding: 0; }
 .entries li {
-  display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-3);
-  align-items: center; padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-subtle); border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-4);
+  align-items: center; padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 .entries .what { font-size: var(--text-base); }
 .entries .when {
@@ -350,9 +349,9 @@ input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
 /* ------------------------------------------------------------- messages */
 
 .chip {
-  display: inline-flex; align-items: center; gap: var(--space-1);
-  font-size: var(--text-sm); padding: var(--space-1) var(--space-3); text-decoration: none;
-  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-size: var(--text-sm); padding: var(--space-2) var(--space-4); text-decoration: none;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs);
   color: var(--color-text-muted);
 }
 a.chip:hover { border-color: var(--color-text-muted); color: var(--color-text-primary); }
@@ -367,7 +366,7 @@ a.chip:hover { border-color: var(--color-text-muted); color: var(--color-text-pr
 
 .foot {
   display: flex; justify-content: space-between; gap: var(--gap);
-  flex-wrap: wrap; padding: var(--space-3) var(--space-4) var(--space-6);
+  flex-wrap: wrap; padding: var(--space-4) var(--space-4) var(--space-6);
   border-top: 1px solid var(--color-border);
   color: var(--color-text-subtle); font: var(--weight-regular) var(--text-sm) var(--font-mono);
 }

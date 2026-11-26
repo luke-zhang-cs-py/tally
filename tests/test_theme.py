@@ -101,8 +101,9 @@ GROUPS = {
         "css": lambda: read(*APP_CSS),
         "script": lambda: read(*APP_JS),
         "text": (
-            # body text in the header and footer, on cards, keys, chips,
-            # entry rows and inputs, a key held down, and the build's banner
+            # body text on the page (sections, entry rows, the totals, the
+            # footer), on keys, chips and inputs, a key held down, and the
+            # build's banner
             [(fg, bg) for fg in ("text-primary", "text-muted", "text-subtle")
              for bg in ("bg", "surface", "surface-subtle", "surface-pressed",
                         "banner")]
@@ -117,7 +118,8 @@ GROUPS = {
                ("accent-hover", "banner"),        # ... hovered
                ("text-on-accent", "accent"),      # a picked chip, Save
                ("warning", "warning-subtle"),     # the notice
-               ("warning", "surface-subtle"),     # "pending" in a row
+               ("warning", "surface-subtle"),     # the notice's own fill
+               ("warning", "bg"),                 # "pending" in a row
                ("success", "success-subtle"),     # notice.good
                ("danger", "danger-subtle"),       # notice.bad
                ("danger", "bg"),                  # the reconcile mismatch
@@ -146,12 +148,15 @@ GROUPS = {
                ("text-muted", "surface-subtle"),     # code inside a paragraph
                ("accent", "surface"),                # step numbers, pressed
                ("success", "surface"),               # the "fixed" flags
-               ("danger", "surface")]
+               ("danger", "surface"),
+               # sections are no longer boxed, so the same marks also sit
+               # straight on the page
+               ("accent", "bg"), ("success", "bg"), ("danger", "bg")]
         ),
         "ui": [("accent", "track"),                  # a bar on its track
                ("accent", "surface"),                # a pressed button's edge
-               ("border-strong", "surface"),         # a hovered button's edge
-               ("border-strong", "bg")],
+               ("border-strong", "surface"),
+               ("border-strong", "bg")],             # every button's edge
         "unpainted": [],
         "rules": lambda: styles_of(read(*WRITEUP)),
     },

@@ -17,7 +17,7 @@
    --------------------------------------------------------------------------- */
 
 .staticBanner {
-  margin: 0; padding: var(--space-3) var(--space-4);
+  margin: 0; padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
   border-left: 3px solid var(--color-warning);
   background: var(--color-banner);
@@ -29,7 +29,7 @@
 .staticBanner b { color: var(--color-text-primary); font-weight: var(--weight-semibold); }
 .staticBanner code {
   font: var(--weight-regular) var(--text-sm) var(--font-mono); color: var(--color-text-primary);
-  background: var(--color-surface-subtle); border-radius: var(--radius-xs); padding: 1px var(--space-1);
+  background: var(--color-surface-subtle); border-radius: var(--radius-xs); padding: 1px 2px;
 }
 .staticBanner a { color: var(--color-accent); text-decoration: none; }
 .staticBanner a:hover { color: var(--color-accent-hover); text-decoration: underline; }
@@ -49,7 +49,7 @@
 .staticBanner .forget {
   margin-top: var(--space-2); font: var(--weight-regular) var(--text-sm) var(--font-sans);
   background: var(--color-surface-subtle); color: var(--color-text-muted);
-  border: 1px solid var(--color-border); border-radius: var(--radius-full);
-  padding: var(--space-1) var(--space-3); cursor: pointer;
+  border: 1px solid var(--color-border); border-radius: var(--radius-xs);
+  padding: var(--space-2) var(--space-4); cursor: pointer;
 }
 .staticBanner .forget:hover { color: var(--color-text-primary); border-color: var(--color-border-strong); }

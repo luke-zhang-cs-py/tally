@@ -42,25 +42,25 @@
    and a word, and never a text colour.
    ====================================================================== */
 :root {
-  /* spacing: --space-N is N x 4px. 1-2px offsets are hairlines, not spacing. */
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
-  --space-6: 24px; --space-7: 28px; --space-9: 36px; --space-11: 44px;
+  /* spacing: --space-N is N x 4px on an 8px rhythm, so only even N exist.
+     1-2px offsets are hairlines, not spacing. */
+  --space-2: 8px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --space-12: 48px; --space-16: 64px;
 
   /* typography */
   --font-display: "Bricolage Grotesque", sans-serif;
   --font-sans: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-  /* each step 3x the last (DESIGN.md); --text-lg is this page's one in-between
-     size, for the headline figures in the tiles */
-  --text-sm: 13px; --text-base: 16px; --text-lg: 32px; --text-xl: 48px;
+  /* each step 3x the last (DESIGN.md) */
+  --text-sm: 13px; --text-base: 16px; --text-xl: 48px;
   --text-display: clamp(64px, 14vw, 144px);
   --leading-display: .95; --leading-tile: 1.12; --leading-body: 1.55; --leading-code: 1.7;
   --weight-regular: 400; --weight-semibold: 600;
   --weight-display-light: 200; --weight-display-heavy: 800;
   --tracking-tight: -0.2px; --tracking-mono: .02em; --tracking-caps: .06em; --tracking-wide: .07em;
 
-  /* shape */
-  --radius-2xs: 3px; --radius-xs: 4px; --radius-sm: 5px; --radius-md: 8px; --radius-lg: 10px;
+  /* shape: 4px at most, on controls only; layout blocks are square */
+  --radius-xs: 4px;
 }
 
 /* ---- themes. :where(:root) has no specificity, so it is only the fallback
@@ -87,11 +87,13 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 .viz-root {
-  padding: var(--space-9) var(--space-6) var(--space-11);
+  padding: var(--space-8) var(--space-6) var(--space-12);
   font: var(--text-base)/var(--leading-body) var(--font-sans);
   background: var(--color-bg); color: var(--color-text-primary);
   min-height: 100vh;
 }
+/* One left-aligned column. Hierarchy comes from type size, weight and
+ * space; a section gets a single hairline, and nothing gets a box. */
 main { max-width: 980px; margin: 0 auto; }
 
 .crumb {
@@ -100,71 +102,70 @@ main { max-width: 980px; margin: 0 auto; }
 }
 h1 {
   font: var(--weight-display-heavy) var(--text-display)/var(--leading-display) var(--font-display);
-  margin: 0 0 var(--space-4); letter-spacing: -0.03em;
+  margin: 0 0 var(--space-6); letter-spacing: -0.03em;
 }
 .lede { color: var(--color-text-muted); margin: 0; font-size: var(--text-base); max-width: 68ch; }
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-5); flex-wrap: wrap; }
-.controls { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-6); flex-wrap: wrap; }
+.controls { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-6); }
 button, .btn {
   font: var(--weight-regular) var(--text-base) var(--font-sans); cursor: pointer; text-decoration: none;
   display: inline-block;
-  background: var(--color-surface); color: var(--color-text-primary);
-  border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3);
+  background: none; color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-xs); padding: var(--space-2) var(--space-4);
 }
-button:hover, .btn:hover { border-color: var(--color-border-strong); }
+button:hover, .btn:hover { border-color: var(--color-text-muted); }
+button:focus-visible, .btn:focus-visible, a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 button[aria-pressed="true"] { border-color: var(--color-accent); color: var(--color-accent); }
 
-/* ------------------------------------------------------------ stat tiles */
-/* A bare stat tile is the one form that ships without a hover layer: there is
- * no plot to interrogate, just the figure and what it counts. */
+/* ------------------------------------------------------------- the figures */
+/* A spec row, not a row of cards: each figure is a label in mono, the number
+ * in heavy mono at the heading size, and a line of what it counts. Nothing to
+ * hover, because there is no plot to interrogate. */
 .tiles {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
-  gap: var(--space-3); margin: var(--space-7) 0 var(--space-3);
+  display: flex; flex-wrap: wrap; gap: var(--space-6) var(--space-12);
+  margin: var(--space-12) 0 0; padding: var(--space-6) 0;
+  border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);
 }
-.tile {
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg); padding: var(--space-4);
-}
+.tile { min-width: 0; max-width: 22ch; }
 .tile .k {
   display: block; color: var(--color-text-muted); font: var(--weight-regular) var(--text-sm) var(--font-mono);
   text-transform: uppercase; letter-spacing: var(--tracking-wide);
 }
 .tile .v {
-  display: block; margin-top: var(--space-1);
-  font: var(--weight-semibold) var(--text-lg)/var(--leading-tile) var(--font-mono);
+  display: block; margin-top: var(--space-2);
+  font: var(--weight-semibold) var(--text-xl)/var(--leading-tile) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
-.tile .n { display: block; margin-top: 2px; color: var(--color-text-subtle); font-size: var(--text-sm); }
+.tile .n { display: block; margin-top: var(--space-2); color: var(--color-text-subtle); font-size: var(--text-sm); }
 
-.note { color: var(--color-text-subtle); font-size: var(--text-sm); max-width: 80ch; margin: var(--space-3) 0 0; }
+.note { color: var(--color-text-subtle); font-size: var(--text-sm); max-width: 80ch; margin: var(--space-4) 0 0; }
 
-/* ---------------------------------------------------------------- panels */
+/* -------------------------------------------------------------- sections */
 .panel {
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); margin-top: var(--space-6);
+  margin-top: var(--space-16); padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
 }
 .panel h2 {
-  margin: 0 0 var(--space-2); letter-spacing: -0.02em;
+  margin: 0 0 var(--space-4); letter-spacing: -0.02em; max-width: 22ch;
   font: var(--weight-display-heavy) var(--text-xl)/1.05 var(--font-display);
 }
 .panel h3 {
   margin: var(--space-6) 0 var(--space-2); color: var(--color-text-muted);
   font: var(--weight-display-heavy) var(--text-base)/1.3 var(--font-display);
 }
-.panel .sub { margin: 0 0 var(--space-4); color: var(--color-text-muted); font-size: var(--text-base); max-width: 76ch; }
+.panel .sub { margin: 0 0 var(--space-6); color: var(--color-text-muted); font-size: var(--text-base); max-width: 76ch; }
 .panel p { font-size: var(--text-base); color: var(--color-text-muted); max-width: 76ch; }
-.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: var(--space-6); }
 
 /* Thin marks on a recessive track, 4px rounding on the data end only so the
  * mark stays anchored flat to the baseline it grows from. */
 .bars { display: grid; gap: var(--space-2); }
-.bar { display: grid; grid-template-columns: clamp(88px, 28%, 192px) 1fr 92px; gap: var(--space-3); align-items: center; }
+.bar { display: grid; grid-template-columns: clamp(88px, 28%, 192px) 1fr 92px; gap: var(--space-4); align-items: center; }
 /* A long module name is cut, never drawn over its bar; the row's title says it in full. */
 .bar .lab {
   font: var(--weight-regular) var(--text-sm) var(--font-mono); color: var(--color-text-muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.bar .rail { position: relative; height: 12px; background: var(--color-track); border-radius: var(--radius-2xs); }
+.bar .rail { position: relative; height: 12px; background: var(--color-track); }
 .bar .fill {
   position: absolute; inset: 0 auto 0 0; background: var(--color-accent);
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
@@ -177,11 +178,13 @@ button[aria-pressed="true"] { border-color: var(--color-accent); color: var(--co
 
 /* ----------------------------------------------------------------- table */
 table { width: 100%; border-collapse: collapse; }
-caption { text-align: left; color: var(--color-text-muted); font-size: var(--text-sm); padding-bottom: var(--space-3); }
+caption { text-align: left; color: var(--color-text-muted); font-size: var(--text-sm); padding-bottom: var(--space-4); }
 th, td {
   text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--color-grid);
   font-size: var(--text-base); vertical-align: top;
 }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
 th { color: var(--color-text-muted); font: var(--weight-semibold) var(--text-sm) var(--font-sans); text-transform: uppercase; letter-spacing: var(--tracking-caps); }
 td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 td.mono { font-family: var(--font-mono); font-size: var(--text-sm); }
@@ -190,31 +193,30 @@ tr.total td { border-bottom: none; font-weight: var(--weight-semibold); }
 
 code {
   font-family: var(--font-mono); font-size: var(--text-sm); background: var(--color-surface-subtle);
-  border: 1px solid var(--color-grid); border-radius: var(--radius-xs); padding: 1px var(--space-1);
+  border-radius: var(--radius-xs); padding: 1px 2px;
 }
 pre {
-  background: var(--color-surface-subtle); border: 1px solid var(--color-grid); border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4); overflow-x: auto;
-  font: var(--text-sm)/var(--leading-code) var(--font-mono); color: var(--color-text-primary); margin: var(--space-3) 0 0;
+  background: var(--color-surface-subtle);
+  padding: var(--space-4); overflow-x: auto;
+  font: var(--text-sm)/var(--leading-code) var(--font-mono); color: var(--color-text-primary); margin: var(--space-4) 0 0;
 }
 
 /* Numbered steps. */
-.flow { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-3); }
+.flow { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: grid; gap: var(--space-4); }
 .flow li {
-  display: grid; grid-template-columns: 26px 1fr; gap: var(--space-3);
+  display: grid; grid-template-columns: 32px 1fr; gap: var(--space-4);
   font-size: var(--text-base); color: var(--color-text-muted);
 }
 .step {
-  font: var(--weight-semibold) var(--text-sm) var(--font-mono); color: var(--color-accent);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
-  text-align: center; padding: 1px 0; height: 20px;
+  font: var(--weight-semibold) var(--text-sm)/1.5 var(--font-mono); color: var(--color-accent);
+  font-variant-numeric: tabular-nums; padding-top: 2px;
 }
 
 /* Status. Never colour alone: each carries a glyph and a word. This copy
  * shows only the good and critical flags; amber is a fill in this family,
  * never a text colour, so there is no text rule for it here. */
 .flag {
-  display: inline-flex; align-items: center; gap: var(--space-1);
+  display: inline-flex; align-items: center; gap: var(--space-2);
   font: var(--weight-semibold) var(--text-sm) var(--font-mono); white-space: nowrap;
 }
 .flag .g { font-size: var(--text-sm); }
@@ -222,13 +224,17 @@ pre {
 .flag.crit { color: var(--color-danger); }
 
 dl.kv {
-  display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4);
-  margin: var(--space-3) 0 0; font-size: var(--text-base);
+  display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0 0; font-size: var(--text-base);
 }
 dl.kv dt { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--text-sm); }
 dl.kv dd { margin: 0; }
 
-footer { margin-top: var(--space-7); color: var(--color-text-subtle); font-size: var(--text-sm); max-width: 86ch; }
+footer {
+  margin-top: var(--space-16); padding-top: var(--space-6); border-top: 1px solid var(--color-border);
+  color: var(--color-text-subtle); font-size: var(--text-sm);
+}
+footer p { max-width: 86ch; }
 footer a { color: inherit; }
 </style>
 </head>
@@ -457,7 +463,7 @@ var TESTS = [
   { file: 'test_paths.py',             n:  5, of: 'that the data directory is one decision' }
 ];
 
-var TEST_LINES = 3544;
+var TEST_LINES = 3549;
 
 /* Which interpreter produced the statement counts above. It matters: coverage
  * counts a `with` block or a multi-line call differently between versions, so
